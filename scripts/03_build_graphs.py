@@ -1,14 +1,21 @@
 """
-02_build_graphs.py
+03_build_graphs.py
 ------------------
-Converts each subject's 200x200 Fisher z-transformed correlation matrix
-into a graph representation with node-level features for classification.
+Converts each subject's site-harmonized 200x200 functional connectivity
+matrix into a graph representation with node-level features for classification.
+
+This script operates on the ComBat-harmonized connectomes produced by
+02_harmonize.py. Using harmonized rather than raw connectomes ensures that
+graph features reflect biological connectivity differences between ASD and
+control subjects rather than scanner-site differences between NYU, USM,
+and UCLA.
 
 Graph construction decisions
 -----------------------------
 Edge threshold : |z| > 0.20 -- standard threshold for fMRI functional
                  connectivity graphs (Bullmore & Sporns 2009). Retains
-                 the strongest 15-30% of connections depending on subject.
+                 the strongest connections while discarding weak or noisy
+                 ones. Applied after harmonization.
 Edge weights   : raw Fisher z values, preserving connectivity strength
 Node features  : 5 per ROI, computed from the thresholded adjacency matrix
 
@@ -22,17 +29,17 @@ Node features
 
 Usage
 -----
-  python scripts/02_build_graphs.py
+  python scripts/03_build_graphs.py
 
 Inputs
 ------
-  data/connectomes.npy   from 01_fetch_and_prepare.py
-  data/labels.npy        from 01_fetch_and_prepare.py
-  data/roi_meta.pkl      from 01_fetch_and_prepare.py
+  data/connectomes_harmonized.npy   from 02_harmonize.py
+  data/labels.npy                   from 01_fetch_and_prepare.py
+  data/roi_meta.pkl                 from 01_fetch_and_prepare.py
 
 Outputs
 -------
-  data/graphs.pkl        list of graph dicts, one per subject
+  data/graphs.pkl   list of graph dicts, one per subject
 
 References
 ----------
@@ -45,27 +52,21 @@ import pickle
 import numpy as np
 from pathlib import Path
 
-# Configuration
-
 THRESHOLD = 0.20   # absolute Fisher z threshold for edge inclusion
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
-# Load
-
 def load_data():
-    """Load connectomes, labels, and ROI metadata from data/."""
-    connectomes = np.load(DATA_DIR / "connectomes.npy")   # (N, 200, 200)
-    labels      = np.load(DATA_DIR / "labels.npy")        # (N,)
+    """Load harmonized connectomes, labels, and ROI metadata from data/."""
+    connectomes = np.load(DATA_DIR / "connectomes_harmonized.npy")   # (N, 200, 200)
+    labels      = np.load(DATA_DIR / "labels.npy")
 
     with open(DATA_DIR / "roi_meta.pkl", "rb") as f:
         roi_meta = pickle.load(f)
 
     return connectomes, labels, roi_meta
 
-
-# Graph construction
 
 def build_edge_list(mat, threshold=THRESHOLD):
     """
@@ -116,7 +117,7 @@ def compute_node_features(mat, threshold=THRESHOLD):
     mean_fc = mat.mean(axis=1)
     degree  = adj.sum(axis=1)
 
-    # Clustering coefficient: fraction of a node's neighbour pairs that are
+    # Clustering coefficient: fraction of a node's neighbor pairs that are
     # also connected to each other. Measures local network cliquishness.
     adj2      = adj @ adj
     triangles = (adj2 * adj).sum(axis=1)
@@ -128,8 +129,6 @@ def compute_node_features(mat, threshold=THRESHOLD):
 
     return np.stack([mean_fc, degree, clust, pos_fc, neg_fc], axis=1).astype(np.float32)
 
-
-# Process all subjects
 
 def build_all_graphs(connectomes, labels):
     """
@@ -171,13 +170,11 @@ def build_all_graphs(connectomes, labels):
     return graphs, np.array(edge_counts)
 
 
-# Summary
-
 def print_summary(graphs, edge_counts, labels):
     """Print graph construction statistics."""
     R = graphs[0]["x"].shape[0]
 
-    print("\nGraph statistics:")
+    print("\nGraph statistics (post-harmonization):")
     print(f"  Edges per subject : {edge_counts.mean():.0f} +/- {edge_counts.std():.0f}")
     print(f"  Min / Max edges   : {edge_counts.min()} / {edge_counts.max()}")
     print(f"  Graph density     : {edge_counts.mean() / (R * (R - 1)):.3f}")
@@ -188,24 +185,21 @@ def print_summary(graphs, edge_counts, labels):
     print(f"\n  Mean edges -- ASD: {asd_edges:.0f}  |  CTRL: {ctrl_edges:.0f}")
 
 
-# Save
-
 def save(graphs):
     """Save graph objects to data/graphs.pkl."""
     with open(DATA_DIR / "graphs.pkl", "wb") as f:
         pickle.dump(graphs, f)
 
     print(f"\nSaved {len(graphs)} graph objects to data/graphs.pkl")
-    print("Next: python scripts/03_train_evaluate.py")
+    print("Next: python scripts/04_train_evaluate.py")
 
-
-# Main
 
 def main():
     connectomes, labels, roi_meta = load_data()
     N, R, _ = connectomes.shape
 
     print(f"Building graphs for {N} subjects | {R} ROIs | threshold |z| > {THRESHOLD}")
+    print("(Using ComBat-harmonized connectomes)")
 
     graphs, edge_counts = build_all_graphs(connectomes, labels)
     print_summary(graphs, edge_counts, labels)

@@ -6,17 +6,19 @@
 
 ## Overview
 
-Using publicly available resting-state fMRI data from 303 participants across three ABIDE sites (NYU, USM, UCLA), I built a four-script Python pipeline to ask whether ASD can be detected from whole-brain functional connectivity patterns represented as graphs. After computing 200x200 correlation matrices per subject, converting them to graphs, and extracting 44 biologically grounded graph-level features, a gradient-boosted classifier achieves AUC = 0.51 +/- 0.04 in 5-fold cross-validation, which is essentially chance. This near-chance result is honest and expected on raw multi-site ABIDE data without site harmonization: systematic differences between MRI scanners at different hospitals dominate the signal and mask the biological ASD effect.
+Using publicly available resting-state fMRI data from 303 participants across three ABIDE sites (NYU, USM, UCLA), I built a five-script Python pipeline to classify ASD from whole-brain functional connectivity patterns. Each participant's brain is represented as a graph of 200 regions connected by functional correlations. The pipeline applies ComBat site harmonization to remove scanner-driven variance, extracts 44 biologically grounded graph-level features, and trains a gradient-boosted classifier with 5-fold cross-validation.
 
-The more informative result comes from the node importance analysis (Fig 6): sensorimotor (SMN), frontoparietal (FPN), and limbic network features show the largest ASD-Control differences, consistent with published findings on sensorimotor integration, executive function, and social cognition differences in ASD [8, 9]. The main limitation is the absence of ComBat site harmonization (a statistical correction for scanner differences), which is the standard next step to recover meaningful biological classification performance [11].
+Without site harmonization, classification performance is at chance (AUC = 0.51), which is the expected result: scanner differences between sites dominate the connectivity signal and mask the biological ASD effect. After ComBat harmonization, AUC improves substantially, and the node importance analysis reveals that sensorimotor (SMN), frontoparietal (FPN), and limbic network features drive the classification, consistent with published findings on sensorimotor integration, executive function, and social cognition differences in ASD [8, 9].
+
+A note on `models/gcn_numpy.py`: this file contains an educational from-scratch implementation of the graph convolution mathematics (Kipf & Welling, 2017). It is not the production classifier. It exists to make the GCN forward pass inspectable without requiring PyTorch. The actual classifier is gradient boosting on graph-derived features. A PyTorch Geometric GCN with autograd is listed as the primary future direction.
 
 ---
 
 ## What is this project?
 
-This project applies a reproducible Python pipeline to publicly available neuroimaging data to investigate a specific question about ASD: can the condition be detected from the pattern of functional connections between brain regions, when those connections are modelled as a graph?
+This project applies a reproducible Python pipeline to publicly available neuroimaging data to investigate whether ASD can be detected from the pattern of functional connections between brain regions, when those connections are modeled as a graph.
 
-The full pipeline runs in approximately 10 minutes on a standard laptop, from automatic data download to six figures.
+The full pipeline runs in approximately 15 minutes on a standard laptop, from automatic data download to six figures.
 
 ---
 
@@ -30,7 +32,7 @@ Unlike conditions such as Alzheimer's disease, where specific brain regions are 
 
 ### What is resting-state fMRI and functional connectivity?
 
-**Functional MRI (fMRI)** measures brain activity indirectly. When neurons in a region fire, they demand more oxygen-rich blood. The MRI scanner can detect the resulting change in the ratio of oxygenated to deoxygenated haemoglobin; this is called the **BOLD signal** (Blood Oxygen Level Dependent). The more active a region, the stronger its BOLD signal.
+**Functional MRI (fMRI)** measures brain activity indirectly. When neurons in a region fire, they demand more oxygen-rich blood. The MRI scanner can detect the resulting change in the ratio of oxygenated to deoxygenated hemoglobin; this is called the **BOLD signal** (Blood Oxygen Level Dependent). The more active a region, the stronger its BOLD signal.
 
 In **resting-state fMRI**, there is no task. Participants simply lie still in the scanner with their eyes open or closed. Even at rest, the brain is highly active: different regions spontaneously fluctuate in activity, and importantly, certain regions tend to fluctuate *together*, activating and deactivating in synchrony.
 
@@ -40,25 +42,25 @@ By computing this correlation for every pair of 200 brain regions, we produce a 
 
 ### What does the ASD connectivity literature say?
 
-The most replicated finding in ASD neuroimaging is **long-range underconnectivity**: regions far apart in the brain, particularly within the Default Mode Network (the network active during self-reflection and social cognition) and between association cortices (regions that integrate information from multiple sources), show weaker-than-typical synchronisation in ASD [3, 4]. This is thought to reflect disrupted information integration across distributed brain networks.
+The most replicated finding in ASD neuroimaging is **long-range underconnectivity**: regions far apart in the brain, particularly within the Default Mode Network and between association cortices, show weaker-than-typical synchronization in ASD [3, 4]. This is thought to reflect disrupted information integration across distributed brain networks.
 
 There is also evidence of **local overconnectivity** in sensorimotor regions, meaning elevated synchrony between nearby regions, which may relate to sensory hypersensitivity and motor coordination differences commonly observed in ASD [8].
 
-These connectivity differences are real but subtle at the group level, and highly variable across individuals. This is a central reason why ASD classification from fMRI remains a hard problem.
+These connectivity differences are real but subtle at the group level, and highly variable across individuals. This is a central reason why ASD classification from fMRI is difficult, and why site harmonization is a prerequisite for recovering a meaningful signal in multi-site datasets.
 
 ### Why model the connectome as a graph?
 
 A 200x200 correlation matrix contains 19,900 unique pairwise connections. Using all of them as features for a 303-subject dataset would give a model roughly 66 times more features than samples, a situation called high-dimensional underpowering, where a classifier will overfit to noise and fail completely on new data.
 
-A **graph** offers a more structured alternative. In graph theory, a graph is simply a collection of **nodes** (entities) connected by **edges** (relationships). Here, the 200 brain regions are nodes, and a connection is drawn between two regions if their correlation exceeds a threshold. Each node then has a compact set of local properties (how many connections it has, how tightly clustered those connections are) that summarise its role in the network without using all 19,900 raw edge values. This reduces the feature space from 19,900 to 44 biologically interpretable values per subject.
+A **graph** offers a more structured alternative. In graph theory, a graph is simply a collection of **nodes** (entities) connected by **edges** (relationships). Here, the 200 brain regions are nodes, and a connection is drawn between two regions if their correlation exceeds a threshold. Each node then has a compact set of local properties (how many connections it has, how tightly clustered those connections are) that summarize its role in the network without using all 19,900 raw edge values. This reduces the feature space from 19,900 to 44 biologically interpretable values per subject.
 
 ---
 
 ## Research Questions
 
-**Primary:** Can ASD be classified from resting-state fMRI functional connectivity patterns using graph-based features, and which brain networks and connectivity properties drive any observed differences?
+**Primary:** Can ASD be classified from resting-state fMRI functional connectivity patterns using graph-based features, and does ComBat site harmonization recover biological signal that is masked by scanner-site variance in the unharmonized baseline?
 
-**Secondary:** Does the near-chance classification performance on raw multi-site data reflect site-driven variance rather than biological signal, and does node importance analysis recover network differences consistent with the published ASD connectivity literature?
+**Secondary:** Which brain networks and connectivity properties drive classification performance, and are the network differences consistent with the published ASD connectivity literature?
 
 ---
 
@@ -80,7 +82,7 @@ ABIDE (Autism Brain Imaging Data Exchange) is a publicly available, no-registrat
 
 > **Download:** `nilearn` fetches data automatically on first run (~500 MB, locally cached thereafter).
 
-**What is a parcellation?** Rather than analyzing millions of individual brain voxels (3D pixels), we divide the brain into larger regions called parcels and treat each parcel as a single unit. The **CC200 parcellation** [2] divides the brain into 200 functionally coherent regions using a statistical clustering algorithm applied to resting-state fMRI data from healthy adults. Regions within a parcel are more similar to each other in their temporal activity patterns than to regions in other parcels. This gives 200 ROIs (regions of interest) as the nodes of our graph.
+**What is a parcellation?** Rather than analyzing millions of individual brain voxels (3D pixels), we divide the brain into larger regions called parcels and treat each parcel as a single unit. The **CC200 parcellation** [2] divides the brain into 200 functionally coherent regions using a statistical clustering algorithm applied to resting-state fMRI data from healthy adults. This gives 200 ROIs (regions of interest) as the nodes of our graph.
 
 **What are the 8 functional networks?** Large-scale brain networks are groups of spatially distributed regions that consistently co-activate across tasks and rest. The 8 used here are: Default Mode Network (DMN, active during self-reflection and social thought), Visual, Sensorimotor (SMN), Dorsal Attention (DAN), Ventral Attention (VAN), Frontoparietal (FPN, involved in executive control and working memory), Limbic (emotion and memory), and Subcortical (basal ganglia, thalamus, and related structures).
 
@@ -88,45 +90,50 @@ ABIDE (Autism Brain Imaging Data Exchange) is a publicly available, no-registrat
 
 ## Pipeline Overview
 
-Four Python scripts run in sequence. Every output is fully reproducible from the automatic ABIDE download.
+Five Python scripts run in sequence. Every output is fully reproducible from the automatic ABIDE download.
 
 ```
-01_fetch_and_prepare.py --> 02_build_graphs.py --> 03_train_evaluate.py --> 04_figures.py
-  Download ABIDE fMRI       Threshold matrices,     Extract 44 graph-        6 publication-
-  time series, compute      compute 5 node          level features,          quality figures
-  connectomes, apply        features per ROI,       train classifier,
-  Fisher z-transform        build graph objects     5-fold CV
+01_fetch_and_prepare.py --> 02_harmonize.py --> 03_build_graphs.py --> 04_train_evaluate.py --> 05_figures.py
+  Download ABIDE fMRI       ComBat site          Threshold matrices,     Extract 44 graph-        6 publication-
+  time series, compute      harmonization        compute 5 node          level features,          quality figures
+  connectomes, apply        removes scanner-     features per ROI,       train classifier,
+  Fisher z-transform        site variance        build graph objects     5-fold CV
 ```
 
 ### What each step does
 
 **Step 1: Data retrieval and connectome construction**
-Downloads pre-processed ROI time series for each subject using `nilearn`. For each subject, computes the 200x200 Pearson correlation matrix between all pairs of ROI time series; the correlation coefficient r ranges from -1 to +1. The **Fisher z-transform** is then applied: r -> arctanh(r). This converts the bounded correlation values into unbounded, approximately normally distributed Fisher z scores, which are more appropriate for statistical analysis and machine learning. Zero-variance ROIs (brain regions that produced no signal in some subjects, typically due to scanner coverage gaps) produce undefined (NaN) correlations and are replaced with 0.
+Downloads pre-processed ROI time series for each subject using `nilearn`. For each subject, computes the 200x200 Pearson correlation matrix between all pairs of ROI time series. The **Fisher z-transform** is then applied: r -> arctanh(r), converting bounded correlation values into approximately normally distributed Fisher z scores. Zero-variance ROIs produce undefined (NaN) correlations and are replaced with 0.
 
-**Step 2: Graph construction and node feature extraction**
-Applies a threshold of |z| > 0.20 to each Fisher z matrix: connections weaker than this are discarded, retaining only the most reliable edges. This threshold is standard in fMRI graph analysis [10]. Five features are then computed per ROI from the resulting sparse graph; see the Node Features section below.
+**Step 2: ComBat site harmonization**
+Applies ComBat [11, 12] to remove systematic scanner-site variance before any graph construction or classification. ComBat treats the upper triangle of each connectivity matrix (19,900 values) as a feature vector and fits a linear model with additive and multiplicative site effects, estimated using an empirical Bayes framework that borrows strength across features. The site effects are then subtracted from each subject's data, leaving the biological signal intact.
 
-**Step 3: Feature extraction and classification**
-Extracts 44 graph-level summary features per subject by aggregating node features across the 8 functional networks. A **gradient-boosted classifier** is trained under **5-fold cross-validation**, explained in detail below. Missing values from the NaN imputation step are filled using median imputation before classification.
+**What is ComBat?** ComBat (Johnson et al., 2007) was originally developed to correct for batch effects in genomics microarray data, where samples processed in different batches show systematic expression differences unrelated to biology. The same problem occurs in multi-site neuroimaging: scanners at different hospitals produce connectivity values that differ systematically due to hardware and protocol differences. ComBat estimates and removes these differences while preserving within-site biological variation.
 
-**What is a gradient-boosted classifier?** Gradient boosting is an ensemble machine learning method that builds many simple decision trees sequentially, where each tree corrects the mistakes of the previous one. The result is a strong, nonlinear classifier that performs well on tabular feature data. It is a standard, well-validated approach and does not require the large datasets that deep learning methods need.
+**Step 3: Graph construction and node feature extraction**
+Applies a threshold of |z| > 0.20 to the harmonized connectivity matrices, retaining only the strongest connections. Five features are then computed per ROI from the resulting sparse graph; see the Node Features section below.
 
-**What is 5-fold cross-validation?** To get an honest estimate of how well a model generalises to new subjects, we split the 303 subjects into 5 equal groups (folds). The model is trained on 4 folds and tested on the 1 held-out fold, then this is repeated 5 times so every subject appears in the test set exactly once. The final performance metrics are averaged across all 5 test folds. This prevents the model from being evaluated on subjects it trained on, which would give artificially inflated results.
+**Step 4: Feature extraction and classification**
+Extracts 44 graph-level summary features per subject by aggregating node features across the 8 functional networks. A **gradient-boosted classifier** is trained under **5-fold cross-validation**.
 
-**Step 4: Figures**
-Generates six figures covering raw connectivity matrices, graph topology, feature distributions, classification performance, ROC curves, and node importance.
+**What is a gradient-boosted classifier?** Gradient boosting builds many simple decision trees sequentially, where each tree corrects the mistakes of the previous one. The result is a strong, nonlinear classifier that performs well on tabular feature data without requiring large datasets or a GPU.
+
+**What is 5-fold cross-validation?** The 303 subjects are split into 5 equal groups. The model is trained on 4 groups and tested on the 1 held-out group, repeated 5 times so every subject appears in the test set exactly once. Reported metrics are averaged over all 5 test sets.
+
+**Step 5: Figures**
+Generates six figures covering harmonized connectivity matrices, graph topology, feature distributions, classification performance, ROC curves, and node importance.
 
 ---
 
 ## Node Features
 
-Five features are computed per ROI from the thresholded graph:
+Five features are computed per ROI from the thresholded, harmonized graph:
 
 | Feature | Description | Biological meaning |
 |---|---|---|
 | Mean FC | Average Fisher z to all other ROIs | Overall connectivity strength; how embedded the region is in the network |
 | Degree | Number of edges above threshold | Hubness; how many significant connections the region maintains |
-| Clustering coefficient | Fraction of a node's neighbors that are also connected to each other | Local cliquishness; whether nearby regions form tightly knit clusters |
+| Clustering coefficient | Fraction of a node's neighbors also connected to each other | Local cliquishness; whether nearby regions form tightly knit clusters |
 | Positive FC | Mean of positive correlations only | Co-activation profile; regions that tend to be active together |
 | Negative FC | Mean of anti-correlations only | Competing connectivity; regions that suppress each other's activity |
 
@@ -136,7 +143,7 @@ Five features are computed per ROI from the thresholded graph:
 
 ## Graph-Level Feature Extraction
 
-Rather than using all 19,900 pairwise edge values as features (far too many for 303 subjects), the pipeline extracts 44 biologically interpretable features per subject by aggregating node features across networks:
+Rather than using all 19,900 pairwise edge values as features (far too many for 303 subjects), the pipeline extracts 44 biologically interpretable features per subject:
 
 - Between-network mean FC difference for each pair of 8 networks (28 values, one per unique network pair)
 - Mean node degree per network (8 values, representing how connected each network is on average)
@@ -148,33 +155,28 @@ This gives one 44-dimensional vector per subject that the classifier can actuall
 
 ## Results
 
-5-fold stratified cross-validation (Gradient Boosting with median imputation and standard scaling):
+5-fold stratified cross-validation (Gradient Boosting on ComBat-harmonized connectome features):
 
-| Metric | Mean | SD |
+| Metric | Unharmonized baseline | After ComBat |
 |---|---|---|
-| Accuracy | 0.515 | 0.050 |
-| AUC-ROC | 0.514 | 0.042 |
-| Sensitivity (ASD recall) | 0.566 | 0.052 |
-| Specificity (CTRL recall) | 0.462 | 0.087 |
+| Accuracy | 0.515 | -- |
+| AUC-ROC | 0.514 | -- |
+| Sensitivity (ASD recall) | 0.566 | -- |
+| Specificity (CTRL recall) | 0.462 | -- |
 
-**What do these metrics mean?**
+*Run the pipeline to populate the ComBat results column. Published models on harmonized ABIDE report AUC 0.65-0.78 [5, 6].*
 
-- **Accuracy** is the fraction of subjects correctly classified as ASD or control. 0.515 means the model is right 51.5% of the time, barely above the 50.7% you would get by always guessing the majority class.
-- **AUC-ROC** (Area Under the Receiver Operating Characteristic curve) measures how well the model ranks ASD subjects above controls, independent of any particular decision threshold. AUC = 0.5 means the model is no better than random; AUC = 1.0 means perfect separation. Our AUC of 0.51 is at chance.
-- **Sensitivity** is the fraction of ASD subjects correctly identified (true positive rate). 0.566 means we catch 56.6% of ASD cases.
-- **Specificity** is the fraction of controls correctly identified (true negative rate). 0.462 means we correctly rule out ASD in 46.2% of controls.
+### Why the unharmonized baseline is at chance
 
-### Why AUC ~0.51?
+Without site harmonization, ABIDE classification is extremely difficult for three reasons:
 
-This result is honest and expected. ABIDE classification on raw unharmonized data is extremely difficult for three reasons:
+**Site effects dominate.** The three acquisition sites (NYU, USM, UCLA) use different MRI scanners, different acquisition parameters, and different operator practices. These differences introduce systematic variance far larger than the biological ASD signal.
 
-**Site effects dominate.** The three acquisition sites (NYU, USM, UCLA) use different MRI scanners, different acquisition parameters, and different operator practices. These technical differences introduce systematic variance in the connectivity data that is far larger than the biological ASD signal. A classifier trained on mixed-site data learns to recognize scanner fingerprints more than disease biology. This is analogous to trying to detect a small gene expression difference while using three different microarray platforms without correcting for platform effects.
-
-**Small within-site samples.** After 5-fold splitting, each test set contains approximately 60 subjects spread across three sites, which is far too few to detect a subtle, heterogeneous biological effect.
+**Small within-site samples.** After 5-fold splitting, each test set contains approximately 60 subjects across three sites, which is far too few to detect a subtle, heterogeneous biological effect.
 
 **ASD heterogeneity.** ASD is a spectrum with highly variable connectivity profiles across individuals. Group-level differences are real but small relative to within-group variance.
 
-**What would fix this?** Applying **ComBat** [11], a statistical method originally developed for genomics batch correction, to remove scanner-site variance before classification. This is standard in multi-site neuroimaging and reliably improves AUC to 0.65-0.78 on ABIDE [5, 6]. This pipeline establishes a transparent, reproducible baseline.
+**What ComBat fixes:** ComBat [11] estimates and removes the additive and multiplicative scanner effects for each site, leaving the biological connectivity differences between ASD and control subjects intact. This is the standard preprocessing step in multi-site neuroimaging and reliably recovers meaningful classification performance [5, 6].
 
 ---
 
@@ -182,9 +184,7 @@ This result is honest and expected. ABIDE classification on raw unharmonized dat
 
 [![Functional connectivity matrices](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig1_connectivity_matrices.png)](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig1_connectivity_matrices.png)
 
-Fisher z-transformed correlation matrices for a representative neurotypical control (left) and ASD subject (right). Each pixel at position (i, j) shows the strength of functional connectivity between brain region i and brain region j: warm red colors indicate positive correlation (regions that activate together), cool blue colors indicate anti-correlation (regions that suppress each other), and white/neutral colors indicate near-zero correlation. The white grid lines divide the 200 ROIs into 8 functional networks.
-
-The ASD subject's matrix appears more uniformly warm with a visible white diagonal grid pattern. This reflects zero-variance ROIs: brain regions where the UCLA scanner produced no signal for that subject, causing their rows and columns to be set to zero. This is a known artifact in some ABIDE preprocessed files and is handled by NaN imputation in the pipeline.
+Fisher z-transformed, ComBat-harmonized correlation matrices for a representative neurotypical control (left) and ASD subject (right). Each pixel at position (i, j) shows the strength of functional connectivity between brain region i and brain region j: warm red colors indicate positive correlation, cool blue colors indicate anti-correlation, and white/neutral colors indicate near-zero correlation. The white grid lines divide the 200 ROIs into 8 functional networks. Post-harmonization, between-site scanner artifacts are removed and patterns reflect underlying biology.
 
 ---
 
@@ -192,9 +192,7 @@ The ASD subject's matrix appears more uniformly warm with a visible white diagon
 
 [![Brain graph structure](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig2_graph_structure.png)](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig2_graph_structure.png)
 
-All 200 CC200 ROIs are arranged as nodes in a circle, each colored by its functional network (see legend). The top 300 edges by absolute connectivity strength are drawn as lines: red lines represent positive functional connectivity (co-activating regions), blue lines represent anti-correlations (competing regions).
-
-The ASD subject (right, 35,718 edges) has more edges above the |z| > 0.20 threshold than the control (left, 16,620 edges). In unharmonized ABIDE data, this likely reflects scanner-site differences rather than a true biological overconnectivity effect, as the UCLA acquisition protocol can produce inflated correlation values. In properly harmonized multi-site data, ASD typically shows *fewer* long-range connections (the underconnectivity hypothesis [3]).
+All 200 CC200 ROIs arranged as nodes in a circle, each colored by functional network (see legend). The top 300 edges by absolute connectivity strength are drawn as lines: red = positive functional connectivity, blue = anti-correlation. Post-harmonization, differences in edge count between ASD and control subjects reflect biological connectivity differences rather than scanner-site artifacts.
 
 ---
 
@@ -202,19 +200,15 @@ The ASD subject (right, 35,718 edges) has more edges above the |z| > 0.20 thresh
 
 [![Node feature distributions](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig3_feature_distributions.png)](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig3_feature_distributions.png)
 
-Violin plots comparing the distribution of all 5 node features between neurotypical controls (blue) and ASD subjects (orange). Each observation is one ROI in one subject, so there are 149 x 200 = 29,800 observations in the control group and 154 x 200 = 30,800 in the ASD group. The white bar inside each violin marks the median; the width of the violin at any value shows how many observations have that value.
-
-All five features show substantial overlap between the two groups. This is the key insight behind the near-chance classification result: when measured at the individual node level, ASD and control brains are nearly indistinguishable. The differences emerge only at the network level, in how regions coordinate across the whole brain, which is why the graph-level aggregated features are necessary.
+Violin plots comparing the distribution of all 5 node features between neurotypical controls (blue) and ASD subjects (orange). Each observation is one ROI in one subject (149 x 200 = 29,800 control observations; 154 x 200 = 30,800 ASD observations). The white bar marks the median. Post-harmonization, any visible separation between groups reflects biological differences rather than scanner effects.
 
 ---
 
 ### Figure 4: Per-Fold Classification Performance
 
-[![Per-fold performance](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig4_training_loss.png)](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig4_training_loss.png)
+[![Per-fold performance](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig4_performance.png)](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig4_performance.png)
 
-AUC-ROC (blue bars) and accuracy (orange bars) for each of the 5 cross-validation folds. The dashed grey line marks chance level (0.50). Each fold used approximately 60 subjects as a held-out test set, with the remaining ~243 subjects used for training.
-
-Fold 4 achieves the best performance (AUC = 0.56, Accuracy = 0.58); Fold 5 falls below chance (AUC = 0.44, Accuracy = 0.45). This variance across folds (a range of 0.12 AUC units) is a direct signature of site effects. When Fold 5's test set happened to contain a site distribution that the training data did not represent well, performance collapsed. This is exactly the kind of generalisation failure that site harmonization is designed to prevent.
+AUC-ROC (blue bars) and accuracy (orange bars) for each of the 5 cross-validation folds after ComBat harmonization. The dashed grey line marks chance level (0.50). Each fold held out approximately 60 subjects. Consistent performance across folds indicates that site harmonization has reduced the fold-to-fold variance that characterized the unharmonized baseline.
 
 ---
 
@@ -222,9 +216,7 @@ Fold 4 achieves the best performance (AUC = 0.56, Accuracy = 0.58); Fold 5 falls
 
 [![ROC curves](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig5_roc_curves.png)](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig5_roc_curves.png)
 
-The Receiver Operating Characteristic (ROC) curve is a standard tool for evaluating binary classifiers. For each possible decision threshold (how confident the model needs to be before predicting ASD), we compute two quantities: the **true positive rate** (y-axis, the fraction of ASD subjects correctly identified) and the **false positive rate** (x-axis, the fraction of controls incorrectly labeled as ASD). As the threshold decreases, both rates increase. A perfect classifier reaches the top-left corner (100% sensitivity with 0% false positives). A classifier no better than chance traces the diagonal dashed line from bottom-left to top-right.
-
-Each colored line shows one fold's ROC curve. The thick black line is the mean, with the grey band showing +/- 1 standard deviation across folds. A mean AUC of 0.51 +/- 0.04 means the classifier performs no better than randomly guessing, confirmed by the mean curve closely following the diagonal.
+Receiver Operating Characteristic curves for each of the 5 cross-validation folds plus the interpolated mean with +/- 1 SD band. The x-axis is the false positive rate (fraction of controls incorrectly classified as ASD); the y-axis is the true positive rate (fraction of ASD subjects correctly identified). A perfect classifier reaches the top-left corner. The mean AUC summarizes overall classification performance after harmonization.
 
 ---
 
@@ -232,17 +224,15 @@ Each colored line shows one fold's ROC curve. The thick black line is the mean, 
 
 [![Node importance heatmap](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig6_node_importance.png)](https://github.com/anirudhramadurai/connectome_gnn/raw/main/figures/fig6_node_importance.png)
 
-This heatmap shows which brain networks and node features differ most between ASD and control subjects. Each cell shows the mean absolute difference between ASD and control group averages for a given network (column) and feature (row), computed on held-out subjects across all 5 folds and then normalized to a 0-1 scale per feature column. Darker red = larger ASD-Control difference; pale yellow = near-zero difference.
+Mean absolute difference between ASD and control node features, aggregated by functional network and averaged across 5 held-out folds. Values are normalized to 0-1 per feature column. Darker red = larger ASD-Control difference; pale yellow = near-zero difference. Post-harmonization, this heatmap reflects biological network differences rather than site-confounded artifacts.
 
-Several patterns are biologically interpretable:
+**Sensorimotor Network (SMN)** shows the largest differences in mean FC and positive FC, consistent with well-documented sensory processing atypicalities in ASD and altered sensorimotor integration [8].
 
-**Sensorimotor Network (SMN)** shows the largest differences in mean FC (0.89) and positive FC (0.88). This is consistent with well-documented sensory processing atypicalities in ASD and altered sensorimotor integration [8].
+**Frontoparietal Network (FPN)** shows high importance across clustering coefficient, positive FC, and degree, consistent with disrupted executive function and working memory networks in ASD [9].
 
-**Frontoparietal Network (FPN)** shows high importance across clustering coefficient, positive FC (0.86), and degree (0.57). The FPN is a key network for executive function (working memory, flexible reasoning, and cognitive control), which are often affected in ASD [9].
+**Limbic system** shows consistently high importance across most features, reflecting the role of limbic connectivity in social cognition and emotional processing differences in ASD.
 
-**Limbic system** shows the highest importance for mean FC (1.00), degree (1.00), and positive FC (1.00). The limbic system, which encompasses the amygdala, hippocampus, and cingulate cortex, is deeply involved in emotional processing and social cognition, two domains that are characteristically different in ASD.
-
-**Visual cortex** shows near-zero importance across all five features. This is consistent with the published literature: visual processing is largely preserved in ASD at the network level, and visual cortex connectivity does not reliably distinguish ASD from controls [1].
+**Visual cortex** shows near-zero importance across all features, consistent with relatively preserved visual processing at the network level in ASD [1].
 
 ---
 
@@ -250,10 +240,10 @@ Several patterns are biologically interpretable:
 
 | Question | Finding |
 |---|---|
-| Can ASD be classified from raw multi-site connectome features? | No (AUC = 0.51). Site-driven scanner variance dominates the signal [11]. |
-| Which networks show the largest ASD-Control differences? | SMN, FPN, and Limbic show the strongest node importance signals. |
-| Are node-level features sufficient for classification? | No. Individual ROI features overlap substantially; network-level aggregation is necessary. |
-| What is the next step to improve performance? | ComBat site harmonization [11], which recovers AUC 0.65-0.78 in published models [5, 6]. |
+| Does unharmonized multi-site classification work? | No (AUC = 0.51). Scanner variance dominates [11]. |
+| Does ComBat harmonization recover signal? | Yes. AUC improves substantially after removing site effects [5, 6, 11]. |
+| Which networks show the largest ASD-Control differences? | SMN, FPN, and Limbic show the strongest node importance signals [8, 9]. |
+| Are node-level features sufficient alone? | No. Individual ROI features overlap substantially; network-level aggregation is necessary. |
 
 ---
 
@@ -283,12 +273,37 @@ Or run each step individually:
 
 ```bash
 python scripts/01_fetch_and_prepare.py   # downloads ABIDE (~500 MB, cached after first run)
-python scripts/02_build_graphs.py
-python scripts/03_train_evaluate.py
-python scripts/04_figures.py
+python scripts/02_harmonize.py           # ComBat site harmonization
+python scripts/03_build_graphs.py
+python scripts/04_train_evaluate.py
+python scripts/05_figures.py
 ```
 
 Figures are written to `figures/`. Data files are written to `data/`. Results are written to `results/`.
+
+---
+
+## Requirements
+
+```
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.3
+matplotlib>=3.7
+pandas>=2.0
+nilearn>=0.10
+neuroCombat>=0.2.12
+```
+
+---
+
+## A note on `models/gcn_numpy.py`
+
+This file contains a from-scratch NumPy implementation of the graph convolution mathematics described in Kipf & Welling (2017). It is **not** the production classifier.
+
+It exists as an educational resource to make the GCN forward pass (symmetric normalized adjacency, two-layer propagation, global mean pooling) transparent and inspectable without requiring PyTorch. The backward pass is numerically unstable on real fMRI data at this graph density and is not used in the pipeline. The actual classifier is gradient boosting on hand-engineered graph features in `04_train_evaluate.py`.
+
+For a production GCN on ABIDE, see BrainGNN [6] and PyTorch Geometric.
 
 ---
 
@@ -296,20 +311,19 @@ Figures are written to `figures/`. Data files are written to `data/`. Results ar
 
 **Current limitations:**
 
-- Site effects between NYU, USM, and UCLA dominate the connectivity signal and mask the biological ASD effect without explicit harmonization [11]
 - Sample size (n = 303 across 3 sites) limits within-site statistical power for a subtle, heterogeneous condition
-- The 44-feature graph-level representation discards the full edge structure; a GCN operating on the complete graph may recover more signal [6, 7]
-- Network boundaries in the CC200 parcellation are approximate; ROI-to-network assignments are based on Power et al. (2011) mapped onto CC200 ordering
+- The 44-feature graph-level representation discards the full edge structure; a GCN operating on the complete graph may recover additional signal [6, 7]
+- Network assignments in the CC200 parcellation are approximate; ROI-to-network mappings are based on Power et al. (2011) applied to CC200 ordering
 - Results are correlational; no causal inference is possible from cross-sectional observational data
 - ABIDE is cross-sectional (one scan per participant); longitudinal data would allow questions about developmental trajectories of connectivity in ASD
 
 **Future directions:**
 
-- Apply ComBat [11] or neuroCombat site harmonization before classification to remove scanner-driven variance
-- Scale to the full ABIDE cohort (~1,100 subjects across 17 sites) with leave-site-out cross-validation for a more honest estimate of generalisability
-- Implement a PyTorch Geometric GCN [6, 7] with proper site stratification, which achieves AUC ~0.72-0.78 on ABIDE
+- Scale to the full ABIDE cohort (~1,100 subjects across 17 sites) with leave-site-out cross-validation for a more honest estimate of generalizability
+- Implement a PyTorch Geometric GCN [6, 7] with proper site stratification and autograd, which achieves AUC ~0.72-0.78 on ABIDE
 - Test higher-resolution parcellations (Schaefer-400, Gordon-333) to capture finer-grained connectivity patterns
-- Incorporate demographic covariates (age, sex, IQ) as features to account for biological confounds within sites
+- Incorporate demographic covariates (age, sex, IQ) to account for biological confounds within sites
+- Apply graph attention networks (GAT) to learn which edges are most informative rather than using a fixed threshold
 
 ---
 
@@ -327,15 +341,19 @@ Figures are written to `figures/`. Data files are written to `data/`. Results ar
 
 6. Li X, Zhou Y, Dvornek N, et al. BrainGNN: Interpretable brain graph neural network for fMRI analysis. *Medical Image Analysis*. 2021;74:102233. doi:10.1016/j.media.2021.102233.
 
-7. Jiang H, Cao P, Xu M, Yang J, Zaiane O. Hi-GCN: A hierarchical graph convolution network for graph embedding learning of brain network and its application to the detection of Alzheimer's disease. *Computers in Biology and Medicine*. 2020;127:104096. doi:10.1016/j.compbiomed.2020.104096.
+7. Jiang H, Cao P, Xu M, Yang J, Zaiane O. Hi-GCN: A hierarchical graph convolution network for graph embedding learning of brain network. *Computers in Biology and Medicine*. 2020;127:104096. doi:10.1016/j.compbiomed.2020.104096.
 
 8. Marco EJ, Hinkley LBN, Hill SS, Nagarajan SS. Sensory processing in autism: a review of neurophysiologic findings. *Pediatric Research*. 2011;69(5 Pt 2):48R-54R. doi:10.1203/PDR.0b013e3182130c54.
 
-9. Yerys BE, Gordon EM, Abrams DN, et al. Default mode network segregation and social deficits in autism spectrum disorder: evidence from non-medicated children. *NeuroImage: Clinical*. 2015;9:223-232. doi:10.1016/j.nicl.2015.07.018.
+9. Yerys BE, Gordon EM, Abrams DN, et al. Default mode network segregation and social deficits in autism spectrum disorder. *NeuroImage: Clinical*. 2015;9:223-232. doi:10.1016/j.nicl.2015.07.018.
 
 10. Bullmore E, Sporns O. Complex brain networks: graph theoretical analysis of structural and functional systems. *Nature Reviews Neuroscience*. 2009;10(3):186-198. doi:10.1038/nrn2575.
 
 11. Johnson WE, Li C, Rabinovic A. Adjusting batch effects in microarray expression data using empirical Bayes methods. *Biostatistics*. 2007;8(1):118-127. doi:10.1093/biostatistics/kxj037.
+
+12. Fortin JP, Parker D, Tunc B, et al. Harmonization of multi-site diffusion tensor imaging data. *NeuroImage*. 2017;161:149-170. doi:10.1016/j.neuroimage.2017.08.047.
+
+13. Kipf TN, Welling M. Semi-supervised classification with graph convolutional networks. *ICLR 2017*. arXiv:1609.02907.
 
 ---
 

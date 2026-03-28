@@ -255,7 +255,7 @@ def save(connectomes, labels, subject_ids, sites, roi_names, networks):
     print(f"  labels.npy       -- {len(labels_arr)} subjects")
     print(f"  metadata.csv     -- subject IDs, sites, diagnoses")
     print(f"  roi_meta.pkl     -- ROI names and network assignments")
-    print("\nNext: python scripts/02_build_graphs.py")
+    print("\nNext: python scripts/02_harmonize.py")
 
 
 # Main
