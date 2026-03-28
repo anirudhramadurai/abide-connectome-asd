@@ -1,26 +1,33 @@
 """
 04_train_evaluate.py
 --------------------
-Extracts graph-level features from each subject's harmonized brain connectivity
-graph and trains a gradient-boosted classifier to distinguish ASD from controls.
-
-This script operates on graphs built from ComBat site-harmonized connectomes.
-Harmonization removes scanner-driven variance between NYU, USM, and UCLA,
-allowing the classifier to learn from biological connectivity differences rather
-than site fingerprints. The expected AUC with harmonized data is 0.65-0.75,
-compared to chance-level performance on the raw unharmonized baseline.
+Extracts features from ComBat site-harmonized functional connectivity matrices
+and trains a gradient-boosted classifier to distinguish ASD from controls.
 
 Classification approach
 -----------------------
-Rather than feeding raw 200x200 matrices to the classifier (40,000 features
-for 303 subjects -- severely underpowered), this script extracts 44 biologically
-meaningful graph-level features per subject by aggregating node features across
-the 8 functional networks:
+The full 200x200 Fisher z matrix contains 19,900 unique pairwise connections
+(upper triangle). Feeding all 19,900 directly to a classifier with 303 subjects
+is severely underpowered and would overfit. Instead, this script uses PCA
+(Principal Component Analysis) to compress the 19,900-dimensional connectivity
+profile of each subject into a compact set of components that capture the most
+variance across subjects.
 
-  Between-network FC difference for each unique network pair  (28 features)
-  Mean node degree per network                                ( 8 features)
-  Mean clustering coefficient per network                     ( 8 features)
-  Total                                                        44 features
+PCA works by finding directions in the high-dimensional feature space along
+which subjects vary most. The first component captures the single direction of
+greatest variance, the second captures the next most after removing the first,
+and so on. Each subject is then represented by their scores on these components
+rather than the raw 19,900 values.
+
+Using the top N_COMPONENTS = 50 principal components retains the dominant
+structure of the connectivity data while reducing dimensionality to a ratio
+that a gradient-boosted classifier can learn from reliably. This is the
+standard approach used in published ABIDE classification papers that report
+AUC 0.65-0.75 on harmonized data.
+
+Note: PCA is fit on the training set only within each fold, then applied to
+the test set. This prevents information leakage from test subjects into the
+feature extraction step.
 
 Classifier: gradient-boosted decision trees (scikit-learn GradientBoostingClassifier)
   -- builds trees sequentially, each correcting errors of the previous
@@ -37,9 +44,10 @@ Usage
 
 Inputs
 ------
-  data/graphs.pkl      from 03_build_graphs.py
-  data/roi_meta.pkl    from 01_fetch_and_prepare.py
-  data/metadata.csv    from 01_fetch_and_prepare.py
+  data/connectomes_harmonized.npy   from 02_harmonize.py
+  data/labels.npy                   from 01_fetch_and_prepare.py
+  data/graphs.pkl                   from 03_build_graphs.py (for node importance)
+  data/roi_meta.pkl                 from 01_fetch_and_prepare.py
 
 Outputs
 -------
@@ -59,15 +67,16 @@ import pickle
 import numpy as np
 import pandas as pd
 from pathlib import Path
+from sklearn.decomposition import PCA
 from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.impute import SimpleImputer
 from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-N_FOLDS     = 5
-RANDOM_SEED = 42
+N_COMPONENTS = 50    # PCA components -- captures dominant connectivity structure
+N_FOLDS      = 5
+RANDOM_SEED  = 42
 
 DATA_DIR    = Path(__file__).parent.parent / "data"
 RESULTS_DIR = Path(__file__).parent.parent / "results"
@@ -75,100 +84,52 @@ RESULTS_DIR.mkdir(exist_ok=True)
 
 
 def load_data():
-    """Load graph objects, ROI metadata, and subject metadata."""
+    """Load harmonized connectomes, labels, graphs, and ROI metadata."""
+    connectomes = np.load(DATA_DIR / "connectomes_harmonized.npy")
+    labels      = np.load(DATA_DIR / "labels.npy")
+
     with open(DATA_DIR / "graphs.pkl",   "rb") as f:
         graphs = pickle.load(f)
     with open(DATA_DIR / "roi_meta.pkl", "rb") as f:
         roi_meta = pickle.load(f)
 
     networks = np.array(roi_meta["networks"])
-    nets     = list(dict.fromkeys(roi_meta["networks"]))
-    labels   = np.array([g["y"] for g in graphs])
 
-    return graphs, labels, networks, nets
+    return connectomes, labels, graphs, networks
 
 
-def extract_features(graph, networks, nets):
+def extract_upper_triangle(connectomes):
     """
-    Extract 44 graph-level features from a single subject's graph.
+    Extract upper triangle values from each connectivity matrix as a
+    flat feature vector.
 
-    Features
-    --------
-    Between-network FC differences (28):
-      For each unique pair of networks (A, B), compute the difference in
-      mean FC between network A and network B. Captures long-range
-      connectivity imbalances between networks.
-
-    Mean degree per network (8):
-      Average number of above-threshold connections per ROI within each
-      network. Reflects how connected each network is as a whole.
-
-    Mean clustering coefficient per network (8):
-      Average local clustering coefficient per ROI within each network.
-      Reflects how tightly interconnected the local neighborhood of each
-      ROI is within its network.
+    For a symmetric 200x200 matrix, the upper triangle contains
+    200 * 199 / 2 = 19,900 unique pairwise connectivity values.
 
     Parameters
     ----------
-    graph    : dict from 03_build_graphs.py
-    networks : (200,) array of network name strings
-    nets     : list of unique network names (order-preserved)
+    connectomes : (N, 200, 200) array
 
     Returns
     -------
-    features : (44,) float64 array
+    X : (N, 19900) float64 array
     """
-    x     = graph["x"]
-    feats = []
-
-    for i, net_a in enumerate(nets):
-        for j, net_b in enumerate(nets):
-            if j <= i:
-                continue
-            fc_a = x[networks == net_a, 0].mean()
-            fc_b = x[networks == net_b, 0].mean()
-            feats.append(fc_a - fc_b)
-
-    for net in nets:
-        feats.append(x[networks == net, 1].mean())
-
-    for net in nets:
-        feats.append(x[networks == net, 2].mean())
-
-    return np.array(feats)
+    N, R, _ = connectomes.shape
+    tri_idx  = np.triu_indices(R, k=1)
+    return np.stack([c[tri_idx] for c in connectomes])
 
 
-def build_feature_matrix(graphs, networks, nets):
+def run_cv(X_raw, labels, graphs, networks):
     """
-    Build the (N, 44) feature matrix for all subjects.
+    Run 5-fold stratified cross-validation with PCA + Gradient Boosting.
+
+    PCA is fit on the training set within each fold and applied to both
+    training and test sets. This ensures no information from test subjects
+    leaks into the feature extraction step.
 
     Parameters
     ----------
-    graphs   : list of graph dicts
-    networks : (200,) array
-    nets     : list of str
-
-    Returns
-    -------
-    X : (N, 44) float64 array
-    """
-    return np.stack([extract_features(g, networks, nets) for g in graphs])
-
-
-def run_cv(X, labels, graphs, networks):
-    """
-    Run 5-fold stratified cross-validation and collect results.
-
-    For each fold:
-      - Trains a gradient-boosted classifier with median imputation
-        and standard scaling on the training set.
-      - Evaluates on the held-out test set.
-      - Accumulates node-level feature importance as the mean absolute
-        ASD-Control difference in raw node features.
-
-    Parameters
-    ----------
-    X        : (N, 44) feature matrix
+    X_raw    : (N, 19900) raw upper triangle feature matrix
     labels   : (N,) int array
     graphs   : list of graph dicts (for node importance)
     networks : (200,) array
@@ -177,30 +138,34 @@ def run_cv(X, labels, graphs, networks):
     -------
     fold_results : list of per-fold result dicts
     all_probs    : (N,) float array of predicted ASD probabilities
-    node_imp     : (200, 5) float array of accumulated node importance
+    node_imp     : (200, 5) float array of node importance
     """
     N = len(labels)
-
-    pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler",  StandardScaler()),
-        ("clf",     GradientBoostingClassifier(
-            n_estimators  = 100,
-            max_depth     = 3,
-            learning_rate = 0.05,
-            random_state  = RANDOM_SEED,
-        )),
-    ])
 
     skf          = StratifiedKFold(n_splits=N_FOLDS, shuffle=True, random_state=RANDOM_SEED)
     fold_results = []
     all_probs    = np.zeros(N)
     node_imp     = np.zeros((graphs[0]["x"].shape[0], 5))
 
-    for fold, (tr, te) in enumerate(skf.split(X, labels)):
-        pipeline.fit(X[tr], labels[tr])
+    clf = GradientBoostingClassifier(
+        n_estimators  = 200,
+        max_depth     = 3,
+        learning_rate = 0.05,
+        subsample     = 0.8,
+        random_state  = RANDOM_SEED,
+    )
 
-        probs = pipeline.predict_proba(X[te])[:, 1]
+    for fold, (tr, te) in enumerate(skf.split(X_raw, labels)):
+        # Fit PCA and scaler on training set only
+        scaler = StandardScaler()
+        pca    = PCA(n_components=N_COMPONENTS, random_state=RANDOM_SEED)
+
+        X_tr = pca.fit_transform(scaler.fit_transform(X_raw[tr]))
+        X_te = pca.transform(scaler.transform(X_raw[te]))
+
+        clf.fit(X_tr, labels[tr])
+
+        probs = clf.predict_proba(X_te)[:, 1]
         preds = (probs >= 0.5).astype(int)
         all_probs[te] = probs
 
@@ -210,8 +175,10 @@ def run_cv(X, labels, graphs, networks):
         sens = cm[1, 1] / max(cm[1].sum(), 1)
         spec = cm[0, 0] / max(cm[0].sum(), 1)
 
+        var_explained = pca.explained_variance_ratio_.sum()
         print(f"  Fold {fold + 1}: Acc={acc:.3f}  AUC={auc:.3f}"
-              f"  Sens={sens:.3f}  Spec={spec:.3f}")
+              f"  Sens={sens:.3f}  Spec={spec:.3f}"
+              f"  (PCA variance explained: {var_explained:.1%})")
 
         fold_results.append({
             "fold": fold + 1,
@@ -221,8 +188,10 @@ def run_cv(X, labels, graphs, networks):
             "spec": spec,
             "cm":   cm,
             "te_idx": te,
+            "pca_var_explained": float(var_explained),
         })
 
+        # Node importance: mean |ASD - Control| difference in raw node features
         asd_feats  = np.stack([graphs[i]["x"] for i in te if labels[i] == 1])
         ctrl_feats = np.stack([graphs[i]["x"] for i in te if labels[i] == 0])
         node_imp  += np.nan_to_num(np.abs(asd_feats.mean(0) - ctrl_feats.mean(0)))
@@ -250,6 +219,9 @@ def print_summary(fold_results):
         print(f"  {label:25s}: {mu:.3f} +/- {sd:.3f}")
         rows.append({"Metric": label, "Mean": round(mu, 3), "SD": round(sd, 3)})
 
+    mean_var = np.mean([r["pca_var_explained"] for r in fold_results])
+    print(f"\n  PCA ({N_COMPONENTS} components) explains {mean_var:.1%} of connectivity variance on average")
+
     return rows
 
 
@@ -274,18 +246,18 @@ def save(fold_results, all_probs, labels, node_imp, summary_rows):
 
 
 def main():
-    graphs, labels, networks, nets = load_data()
-    N = len(graphs)
+    connectomes, labels, graphs, networks = load_data()
+    N = len(labels)
 
     print(f"Subjects: {N}  ASD={labels.sum()}  CTRL={(labels == 0).sum()}")
 
-    print("\nExtracting features ...")
-    X         = build_feature_matrix(graphs, networks, nets)
-    nan_count = np.isnan(X).sum()
-    print(f"Feature matrix: {X.shape}  (NaNs: {nan_count} -- will be imputed)")
+    print("\nExtracting upper triangle features ...")
+    X_raw = extract_upper_triangle(connectomes)
+    print(f"Feature matrix: {X_raw.shape}  ({X_raw.shape[1]} connectivity values per subject)")
+    print(f"PCA will reduce to {N_COMPONENTS} components within each fold")
 
-    print(f"\n5-Fold Cross-Validation (Gradient Boosting on harmonized connectome features)\n")
-    fold_results, all_probs, node_imp = run_cv(X, labels, graphs, networks)
+    print(f"\n5-Fold Cross-Validation (PCA + Gradient Boosting on harmonized connectomes)\n")
+    fold_results, all_probs, node_imp = run_cv(X_raw, labels, graphs, networks)
 
     summary_rows = print_summary(fold_results)
     save(fold_results, all_probs, labels, node_imp, summary_rows)
