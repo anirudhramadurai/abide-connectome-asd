@@ -1,4 +1,4 @@
-# connectome-gnn
+# abide-connectome-asd
 
 **Graph-based classification of Autism Spectrum Disorder from resting-state fMRI functional connectivity data**
 
