@@ -344,3 +344,4 @@ It exists as an educational resource to make the GCN forward pass transparent: s
 ## Acknowledgements
 
 Developed as an independent computational neuroscience project. Data from the ABIDE Preprocessed Connectomes Project, accessed via nilearn. ABIDE was supported by grants from the Autism Speaks Foundation and the National Institute of Mental Health.
+
