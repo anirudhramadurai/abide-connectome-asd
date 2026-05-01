@@ -331,7 +331,7 @@ It exists as an educational resource to make the GCN forward pass transparent: s
 
 9. Yerys BE, Gordon EM, Abrams DN, et al. Default mode network segregation and social deficits in autism spectrum disorder. *NeuroImage: Clinical*. 2015;9:223-232. doi:10.1016/j.nicl.2015.07.018.
 
-10. Bullmore E, Sporns O. Complex brain networks: graph theoretical analysis of structural and functional systems. *Nature Reviews Neuroscience*. 2009;10(3):186-198. doi:10.1038/nrn2575.
+10. Bassett DS, Sporns O. Network neuroscience. *Nature Neuroscience*. 2017;20(3):353-364. doi:10.1038/nn.4357. PMID: 28230844.
 
 11. Johnson WE, Li C, Rabinovic A. Adjusting batch effects in microarray expression data using empirical Bayes methods. *Biostatistics*. 2007;8(1):118-127. doi:10.1093/biostatistics/kxj037.
 
