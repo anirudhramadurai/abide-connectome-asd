@@ -258,7 +258,7 @@ cd abide-connectome-asd
 # 2. Create a virtual environment
 python3 -m venv venv
 source venv/bin/activate          # macOS / Linux
-venv\Scripts\activate             # Windows
+venv/Scripts/activate             # Windows
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -308,6 +308,28 @@ It exists as an educational resource to make the GCN forward pass transparent: s
 - Apply graph attention networks (GAT) to learn which edges are most informative rather than using a fixed threshold
 - Test higher-resolution parcellations (Schaefer-400, Gordon-333) to capture finer-grained connectivity patterns
 - Incorporate demographic covariates (age, sex, IQ) to account for biological confounds
+
+---
+
+## Frequently Asked Questions
+
+**Q: Why use only 3 ABIDE sites instead of the full 17-site dataset?**
+Starting with 3 sites (NYU, USM, UCLA) allows a clear demonstration of the ComBat harmonization effect with a manageable and interpretable cohort. The full ABIDE cohort (~1,100 subjects across 17 sites) is explicitly listed as a future direction.
+
+**Q: Why gradient boosting over logistic regression or SVM?**
+Gradient boosting handles the high-dimensional, non-linear structure of PCA-compressed connectivity features well and is robust to mild class imbalance. Logistic regression on PCA components would be a valid baseline comparison and is a natural next step.
+
+**Q: The GCN performed well in training but failed to generalize -- does that mean GNNs don't work for fMRI?**
+No -- it means GCNs require either larger datasets or richer per-node features. Published GCN papers achieving AUC 0.72-0.78 on ABIDE use either the full multi-site cohort or time-series-derived node features rather than thresholded graph statistics. The failure here is about dataset scale and feature richness, not the GCN approach itself.
+
+**Q: Could ComBat remove the ASD biological signal along with site effects?**
+This is exactly why the diagnostic label is passed as a protected covariate. Without it, ComBat treats group differences as part of the batch effect and removes them. Including the label tells ComBat to preserve between-group variance when modeling site effects.
+
+**Q: Why is specificity so much more variable across folds than sensitivity?**
+The dataset has 154 ASD and 149 controls -- nearly balanced, but fold composition shifts slightly. With ~30 subjects per fold, a few misclassified controls significantly shifts the specificity estimate. Sensitivity is more stable because the ASD class is marginally larger.
+
+**Q: What does the CC200 parcellation mean, and could a different one change the results?**
+CC200 divides the brain into 200 functionally defined parcels. A higher-resolution parcellation such as Schaefer-400 would capture finer-grained connectivity but increase the feature space from 19,900 to ~79,800 pairwise connections, requiring more subjects to avoid overfitting. This is listed as a future direction.
 
 ---
 
