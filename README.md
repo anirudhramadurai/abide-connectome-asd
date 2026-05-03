@@ -32,7 +32,7 @@ Unlike conditions such as Alzheimer's disease, where specific brain regions are 
 
 ### What is resting-state fMRI and functional connectivity?
 
-**Functional MRI (fMRI)** measures brain activity indirectly via the **BOLD signal** (Blood Oxygen Level Dependent) -- the ratio of oxygenated to deoxygenated hemoglobin, which changes when neurons fire. In **resting-state fMRI**, there is no task; participants lie still in the scanner. Even at rest, certain brain regions fluctuate in activity together, activating and deactivating in synchrony.
+**Functional MRI (fMRI)** measures brain activity indirectly via the **BOLD signal** (Blood Oxygen Level Dependent), the ratio of oxygenated to deoxygenated hemoglobin, which changes when neurons fire. In **resting-state fMRI**, there is no task; participants lie still in the scanner. Even at rest, certain brain regions fluctuate in activity together, activating and deactivating in synchrony.
 
 **Functional connectivity (FC)** is the statistical correlation between the BOLD time series of two brain regions. A correlation near +1 means the regions consistently co-activate (positive FC); near -1 means they consistently suppress each other (anti-correlation). By computing this for every pair of 200 brain regions, we produce a 200x200 **functional connectome** capturing the brain's large-scale coordination structure for each subject.
 
@@ -42,7 +42,7 @@ The most replicated finding in ASD neuroimaging is **long-range underconnectivit
 
 ### Why model the connectome as a graph?
 
-A 200x200 correlation matrix contains 19,900 unique pairwise connections. Using all of them as features for 303 subjects would give a model 66 times more features than samples -- a recipe for overfitting. A **graph** offers a structured alternative: 200 ROIs as nodes, connections above a threshold as edges, and compact node features summarizing each region's local connectivity properties. This reduces the raw feature space to something a classifier can actually learn from.
+A 200x200 correlation matrix contains 19,900 unique pairwise connections. Using all of them as features for 303 subjects would give a model 66 times more features than samples, a recipe for overfitting. A **graph** offers a structured alternative: 200 ROIs as nodes, connections above a threshold as edges, and compact node features summarizing each region's local connectivity properties. This reduces the raw feature space to something a classifier can actually learn from.
 
 ---
 
@@ -85,16 +85,16 @@ Six Python scripts run in sequence. Every output is fully reproducible from the 
   Download ABIDE fMRI time series, compute 200x200 connectomes, apply Fisher z-transform
 
 02_harmonize.py
-  ComBat site harmonization -- remove scanner-site variance while preserving ASD biology
+  ComBat site harmonization: remove scanner-site variance while preserving ASD biology
 
 03_build_graphs.py
   Threshold harmonized matrices at |z| > 0.20, compute 5 node features per ROI
 
 04_train_evaluate.py  [main result]
-  PCA (50 components) + Gradient Boosting on full upper triangle -- 5-fold CV
+  PCA (50 components) + Gradient Boosting on full upper triangle (5-fold CV)
 
 05_gnn_train_evaluate.py
-  PyTorch Geometric GCN on sparser graphs (|z| > 0.50) -- 5-fold CV
+  PyTorch Geometric GCN on sparser graphs (|z| > 0.50, 5-fold CV)
 
 06_figures.py
   6 publication-quality figures from the harmonized pipeline
@@ -106,7 +106,7 @@ Six Python scripts run in sequence. Every output is fully reproducible from the 
 
 **Step 2: ComBat site harmonization.** Applies ComBat [11, 12] to remove systematic scanner-site variance before any classification. The upper triangle of each matrix (19,900 values) is treated as a feature vector. ComBat fits additive and multiplicative site effects using an empirical Bayes framework and subtracts them, leaving biological ASD-vs-Control variance intact. Critically, the diagnostic label is passed as a protected covariate; without this, ComBat removes biological signal along with site effects.
 
-**What is ComBat?** ComBat was developed to correct batch effects in genomics microarray data -- the same problem occurs in multi-site neuroimaging, where scanners at different hospitals produce systematically different connectivity values unrelated to biology. In this dataset, USM had inflated mean FC (0.32 vs ~0.25 at NYU and UCLA) before harmonization. After ComBat, all three sites converge to ~0.265 and between-site variance drops to zero.
+**What is ComBat?** ComBat was developed to correct batch effects in genomics microarray data; the same problem occurs in multi-site neuroimaging, where scanners at different hospitals produce systematically different connectivity values unrelated to biology. In this dataset, USM had inflated mean FC (0.32 vs ~0.25 at NYU and UCLA) before harmonization. After ComBat, all three sites converge to ~0.265 and between-site variance drops to zero.
 
 **Step 3: Graph construction.** Applies threshold |z| > 0.20 to harmonized matrices, retaining the strongest connections. Five features are computed per ROI from the resulting graph (see Node Features below).
 
@@ -180,7 +180,7 @@ Published GCN results achieving AUC 0.72-0.78 on ABIDE use either much larger mu
 
 [![Functional connectivity matrices](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig1_connectivity_matrices.png)](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig1_connectivity_matrices.png)
 
-ComBat-harmonized Fisher z-transformed correlation matrices for a representative Control (left) and ASD subject (right). Warm red = positive FC; cool blue = anti-correlation; white/neutral = near-zero. The white grid lines divide the 200 ROIs into 8 functional networks. The ASD subject shows more uniformly warm coloring -- a consequence of higher overall mean FC in this particular subject, visible across most network blocks.
+ComBat-harmonized Fisher z-transformed correlation matrices for a representative Control (left) and ASD subject (right). Warm red = positive FC; cool blue = anti-correlation; white/neutral = near-zero. The white grid lines divide the 200 ROIs into 8 functional networks. The ASD subject shows more uniformly warm coloring, a consequence of higher overall mean FC in this particular subject, visible across most network blocks.
 
 ---
 
@@ -188,7 +188,7 @@ ComBat-harmonized Fisher z-transformed correlation matrices for a representative
 
 [![Brain graph structure](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig2_graph_structure.png)](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig2_graph_structure.png)
 
-All 200 CC200 ROIs arranged in a circle, colored by functional network. The top 300 edges by absolute FC strength are drawn: red = positive FC, blue = anti-correlation. The ASD subject (right, 33,946 edges) has more than twice the edges above threshold as the Control (left, 15,558 edges). After harmonization this difference reflects individual biological variation -- not the scanner-site artifact that drove the 0.51 unharmonized AUC.
+All 200 CC200 ROIs arranged in a circle, colored by functional network. The top 300 edges by absolute FC strength are drawn: red = positive FC, blue = anti-correlation. The ASD subject (right, 33,946 edges) has more than twice the edges above threshold as the Control (left, 15,558 edges). After harmonization this difference reflects individual biological variation, not the scanner-site artifact that drove the 0.51 unharmonized AUC.
 
 ---
 
@@ -196,7 +196,7 @@ All 200 CC200 ROIs arranged in a circle, colored by functional network. The top 
 
 [![Node feature distributions](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig3_feature_distributions.png)](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig3_feature_distributions.png)
 
-Violin plots comparing the 5 node features between Control (blue) and ASD (orange) across all subjects and ROIs (149 x 200 = 29,800 control observations; 154 x 200 = 30,800 ASD observations). The white bar marks the median. All five features show substantial overlap between groups, explaining why individual ROI-level features are insufficient for classification -- the discriminative signal is in how features vary across the network structure, not in any single feature's marginal distribution.
+Violin plots comparing the 5 node features between Control (blue) and ASD (orange) across all subjects and ROIs (149 x 200 = 29,800 control observations; 154 x 200 = 30,800 ASD observations). The white bar marks the median. All five features show substantial overlap between groups, explaining why individual ROI-level features are insufficient for classification; the discriminative signal is in how features vary across the network structure, not in any single feature's marginal distribution.
 
 ---
 
@@ -204,7 +204,7 @@ Violin plots comparing the 5 node features between Control (blue) and ASD (orang
 
 [![Per-fold performance](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig4_performance.png)](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig4_performance.png)
 
-AUC-ROC (blue) and Accuracy (orange) for each of the 5 cross-validation folds after ComBat harmonization. All five folds are well above chance. Fold 1 achieves the best AUC (0.77) and Fold 5 the lowest (0.67), a range of 0.10 -- substantially tighter than the unharmonized baseline, where fold-to-fold variance reflected which sites happened to fall in the test set. The consistent performance across folds is the main indicator that harmonization succeeded in removing site confounding.
+AUC-ROC (blue) and Accuracy (orange) for each of the 5 cross-validation folds after ComBat harmonization. All five folds are well above chance. Fold 1 achieves the best AUC (0.77) and Fold 5 the lowest (0.67), a range of 0.10, substantially tighter than the unharmonized baseline, where fold-to-fold variance reflected which sites happened to fall in the test set. The consistent performance across folds is the main indicator that harmonization succeeded in removing site confounding.
 
 ---
 
@@ -222,7 +222,7 @@ ROC curves for each of the 5 folds plus the interpolated mean with +/- 1 SD band
 
 Mean absolute difference between ASD and Control node features, aggregated by functional network and averaged across 5 held-out folds. Values are normalized 0-1 per feature row. Darker red = larger ASD-Control difference.
 
-**Limbic system** shows the highest importance for Mean FC (1.00), Degree (1.00), and Positive FC (1.00) -- the strongest pattern in the heatmap. The limbic system encompasses the amygdala, hippocampus, and cingulate cortex, which are central to emotional processing and social cognition -- two domains characteristically affected in ASD.
+**Limbic system** shows the highest importance for Mean FC (1.00), Degree (1.00), and Positive FC (1.00), the strongest pattern in the heatmap. The limbic system encompasses the amygdala, hippocampus, and cingulate cortex, which are central to emotional processing and social cognition, two domains characteristically affected in ASD.
 
 **Frontoparietal Network (FPN)** shows the highest importance for Clustering Coefficient (1.00) and Negative FC (1.00), and high Degree (0.44). The FPN is a key network for executive function, working memory, and flexible reasoning. The FPN anti-correlation pattern is particularly interesting: negative FC (anti-correlated connectivity) between FPN regions shows the largest ASD-Control difference of any feature-network combination, consistent with disrupted executive network dynamics [9].
 
@@ -319,14 +319,14 @@ Starting with 3 sites (NYU, USM, UCLA) allows a clear demonstration of the ComBa
 **Q: Why gradient boosting over logistic regression or SVM?**
 Gradient boosting handles the high-dimensional, non-linear structure of PCA-compressed connectivity features well and is robust to mild class imbalance. Logistic regression on PCA components would be a valid baseline comparison and is a natural next step.
 
-**Q: The GCN performed well in training but failed to generalize -- does that mean GNNs don't work for fMRI?**
-No -- it means GCNs require either larger datasets or richer per-node features. Published GCN papers achieving AUC 0.72-0.78 on ABIDE use either the full multi-site cohort or time-series-derived node features rather than thresholded graph statistics. The failure here is about dataset scale and feature richness, not the GCN approach itself.
+**Q: The GCN performed well in training but failed to generalize. Does that mean GNNs don't work for fMRI?**
+No. It means GCNs require either larger datasets or richer per-node features. Published GCN papers achieving AUC 0.72-0.78 on ABIDE use either the full multi-site cohort or time-series-derived node features rather than thresholded graph statistics. The failure here is about dataset scale and feature richness, not the GCN approach itself.
 
 **Q: Could ComBat remove the ASD biological signal along with site effects?**
 This is exactly why the diagnostic label is passed as a protected covariate. Without it, ComBat treats group differences as part of the batch effect and removes them. Including the label tells ComBat to preserve between-group variance when modeling site effects.
 
 **Q: Why is specificity so much more variable across folds than sensitivity?**
-The dataset has 154 ASD and 149 controls -- nearly balanced, but fold composition shifts slightly. With ~30 subjects per fold, a few misclassified controls significantly shifts the specificity estimate. Sensitivity is more stable because the ASD class is marginally larger.
+The dataset has 154 ASD and 149 controls, nearly balanced, but fold composition shifts slightly. With ~30 subjects per fold, a few misclassified controls significantly shifts the specificity estimate. Sensitivity is more stable because the ASD class is marginally larger.
 
 **Q: What does the CC200 parcellation mean, and could a different one change the results?**
 CC200 divides the brain into 200 functionally defined parcels. A higher-resolution parcellation such as Schaefer-400 would capture finer-grained connectivity but increase the feature space from 19,900 to ~79,800 pairwise connections, requiring more subjects to avoid overfitting. This is listed as a future direction.

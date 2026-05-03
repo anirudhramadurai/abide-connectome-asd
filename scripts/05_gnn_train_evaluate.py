@@ -18,7 +18,7 @@ GCNConv's message passing aggregates each node's features with those of
 its neighbors. With a 0.20 threshold, graphs have ~60% density (~24,000
 edges per subject), meaning each node averages over ~120 neighbors in
 every message passing step. After two layers, every node's representation
-converges toward the global mean -- the local structure that GCNs are
+converges toward the global mean, the local structure that GCNs are
 designed to exploit is washed out.
 
 At |z| > 0.50, graphs retain only the strongest ~15% of connections
@@ -93,7 +93,7 @@ from torch_geometric.nn import GCNConv, global_mean_pool
 from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
-# GCN-specific edge threshold -- higher than the GB pipeline (0.20)
+# GCN-specific edge threshold, higher than the GB pipeline (0.20)
 # to keep graphs sparse enough for meaningful local message passing
 GCN_THRESHOLD = 0.50
 
@@ -158,11 +158,11 @@ def build_sparse_graph(mat, threshold):
     and a 5-dimensional node feature vector per ROI.
 
     Node features (same as 03_build_graphs.py, recomputed at new threshold):
-      0  mean_fc    -- average Fisher z to all other ROIs
-      1  degree     -- number of edges above threshold
-      2  clustering -- local clustering coefficient
-      3  pos_fc     -- mean positive FC
-      4  neg_fc     -- mean negative FC
+      0  mean_fc   : average Fisher z to all other ROIs
+      1  degree    : number of edges above threshold
+      2  clustering: local clustering coefficient
+      3  pos_fc    : mean positive FC
+      4  neg_fc    : mean negative FC
 
     Parameters
     ----------
@@ -397,7 +397,7 @@ def save(fold_results, all_probs, labels, node_imp, summary_rows):
 
 def main():
     print("=" * 60)
-    print("  BrainGCN -- PyTorch Geometric")
+    print("  BrainGCN: PyTorch Geometric")
     print(f"  Device: {DEVICE}")
     print("=" * 60)
 

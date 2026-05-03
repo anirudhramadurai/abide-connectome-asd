@@ -30,13 +30,13 @@ the test set. This prevents information leakage from test subjects into the
 feature extraction step.
 
 Classifier: gradient-boosted decision trees (scikit-learn GradientBoostingClassifier)
-  -- builds trees sequentially, each correcting errors of the previous
-  -- well-suited to small tabular datasets; does not require GPU
+  - builds trees sequentially, each correcting errors of the previous
+  - well-suited to small tabular datasets; does not require GPU
 
 Evaluation: 5-fold stratified cross-validation
-  -- each fold uses ~242 subjects for training and ~61 for testing
-  -- stratified to preserve ASD/Control ratio across folds
-  -- all reported metrics are averaged over the 5 held-out test sets
+  - each fold uses ~242 subjects for training and ~61 for testing
+  - stratified to preserve ASD/Control ratio across folds
+  - all reported metrics are averaged over the 5 held-out test sets
 
 Usage
 -----
@@ -74,7 +74,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-N_COMPONENTS = 50    # PCA components -- captures dominant connectivity structure
+N_COMPONENTS = 50    # PCA components: captures dominant connectivity structure
 N_FOLDS      = 5
 RANDOM_SEED  = 42
 
@@ -240,8 +240,8 @@ def save(fold_results, all_probs, labels, node_imp, summary_rows):
     pd.DataFrame(summary_rows).to_csv(RESULTS_DIR / "metrics.csv", index=False)
 
     print("\nSaved results/")
-    print("  cv_results.pkl  -- fold results, probabilities, node importance")
-    print("  metrics.csv     -- summary table")
+    print("  cv_results.pkl: fold results, probabilities, node importance")
+    print("  metrics.csv: summary table")
     print("\nNext: python scripts/05_figures.py")
 
 

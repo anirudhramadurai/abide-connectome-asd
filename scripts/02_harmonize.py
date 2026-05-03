@@ -144,14 +144,14 @@ def run_combat(tri_data, sites, labels):
     with a column identifying the batch (site) for each sample. Crucially,
     the diagnostic label (ASD vs Control) must be passed as a protected
     biological covariate. Without this, ComBat cannot distinguish biological
-    variance from site variance and will remove both -- which is why AUC
+    variance from site variance and will remove both, which is why AUC
     degrades when diagnosis is omitted.
 
     Parameters
     ----------
     tri_data : (19900, N) feature matrix
     sites    : (N,) array of site strings
-    labels   : (N,) int array -- 1 = ASD, 0 = Control
+    labels   : (N,) int array, 1 = ASD, 0 = Control
 
     Returns
     -------
@@ -209,7 +209,7 @@ def save(connectomes_harmonized):
     """Save harmonized connectomes to data/."""
     np.save(DATA_DIR / "connectomes_harmonized.npy", connectomes_harmonized)
     print(f"\nSaved to data/")
-    print(f"  connectomes_harmonized.npy  -- shape {connectomes_harmonized.shape}")
+    print(f"  connectomes_harmonized.npy: shape {connectomes_harmonized.shape}")
     print("\nNext: python scripts/03_build_graphs.py")
 
 

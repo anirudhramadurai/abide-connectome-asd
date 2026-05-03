@@ -4,31 +4,31 @@
 Generates 6 publication-quality figures from the harmonized ABIDE connectome
 pipeline.
 
-Figure 1 -- Functional connectivity matrices (ASD vs. Control)
+Figure 1: Functional connectivity matrices (ASD vs. Control)
   Representative 200x200 Fisher z-transformed, ComBat-harmonized correlation
   matrices for one subject per group. Warmer colors = stronger positive
   correlation. Network boundary lines overlaid. Colorbar anchored to the
   right of the ASD panel.
 
-Figure 2 -- Brain graph visualization (circular layout)
+Figure 2: Brain graph visualization (circular layout)
   Each of the 200 CC200 ROIs arranged as a node in a circle, colored by
   functional network. The top 300 edges by absolute weight are drawn;
   red = positive FC, blue = anti-correlation. Post-harmonization, the
   ASD-vs-CTRL edge count difference reflects biology rather than site effects.
 
-Figure 3 -- Node feature distributions by group
+Figure 3: Node feature distributions by group
   Violin plots comparing ASD vs. Control distributions for each of the 5
   node features across all subjects and ROIs. Post-harmonization, any
   visible separation reflects biological group differences.
 
-Figure 4 -- Per-fold classification performance
+Figure 4: Per-fold classification performance
   Bar chart showing AUC-ROC and accuracy for each of the 5 CV folds,
   with a dashed chance line at 0.50.
 
-Figure 5 -- ROC curves (5-fold CV)
+Figure 5: ROC curves (5-fold CV)
   One ROC curve per fold plus the interpolated mean +/- 1 SD band.
 
-Figure 6 -- Node importance heatmap (brain network x feature)
+Figure 6: Node importance heatmap (brain network x feature)
   Mean absolute difference between ASD and Control node features,
   aggregated by functional network and averaged across 5 held-out test
   folds. Post-harmonization, this reflects biological network differences.
@@ -157,7 +157,7 @@ def fig1_matrices(connectomes, labels, networks, nets):
 
     fig.suptitle(
         "Resting-State Functional Connectivity Matrices\n"
-        "ABIDE dataset, CC200 parcellation (200 ROIs, 8 networks) -- ComBat harmonized",
+        "ABIDE dataset, CC200 parcellation (200 ROIs, 8 networks), ComBat harmonized",
         fontsize=13, fontweight="bold", y=1.02,
     )
     fig.tight_layout()
@@ -305,7 +305,7 @@ def fig4_performance(res):
     ax.set_ylabel("Score")
     ax.set_title(
         "Per-Fold Classification Performance\n"
-        f"ABIDE -- Gradient Boosting on ComBat-harmonized connectome features "
+        f"ABIDE: Gradient Boosting on ComBat-harmonized connectome features "
         f"(mean AUC = {mean_auc:.2f})",
         fontweight="bold",
     )
@@ -360,7 +360,7 @@ def fig5_roc(res):
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
     ax.set_title(
-        "ROC Curves -- ASD vs Control\n"
+        "ROC Curves: ASD vs Control\n"
         "5-Fold CV on ComBat-harmonized ABIDE",
         fontweight="bold",
     )

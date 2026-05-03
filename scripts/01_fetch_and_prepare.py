@@ -6,7 +6,7 @@ computes functional connectivity matrices for each subject.
 
 Dataset   : ABIDE Preprocessed Connectomes Project (ABIDE-PCP)
             Di Martino A, et al. Mol Psychiatry (2014). PMID: 24514918
-Parcellation: CC200 -- 200 functionally-defined ROIs
+Parcellation: CC200 (200 functionally-defined ROIs)
               Craddock RC, et al. Hum Brain Mapp (2012). PMID: 21769991
 Pipeline  : C-PAC, band-pass filtered, no global signal regression
 Access    : Fully public, no registration required
@@ -37,7 +37,7 @@ Usage
 Outputs
 -------
   data/connectomes.npy   (N, 200, 200) float64 Fisher z matrices
-  data/labels.npy        (N,) int array -- 1 = ASD, 0 = Control
+  data/labels.npy        (N,) int array, 1 = ASD, 0 = Control
   data/metadata.csv      Subject IDs, sites, diagnoses
   data/roi_meta.pkl      ROI names and network assignments
 
@@ -94,7 +94,7 @@ def download_abide():
     ts_files : list of time-series arrays or file paths, one per subject
     """
     print("Fetching ABIDE phenotypic data and ROI time series ...")
-    print("(First run will download ~500 MB -- subsequent runs use cache)\n")
+    print("(First run will download ~500 MB; subsequent runs use cache)\n")
 
     abide = datasets.fetch_abide_pcp(
         derivatives              = ["rois_cc200"],
@@ -142,7 +142,7 @@ def compute_connectomes(pheno, ts_files):
     Returns
     -------
     connectomes : list of (200, 200) float64 arrays
-    labels      : list of int -- 1 = ASD, 0 = Control
+    labels      : list of int, 1 = ASD, 0 = Control
     subject_ids : list of str
     sites       : list of str
     """
@@ -251,10 +251,10 @@ def save(connectomes, labels, subject_ids, sites, roi_names, networks):
     print(f"  Controls : {n_ctrl}")
     print(f"  Total    : {len(labels_arr)}")
     print(f"\nSaved to data/")
-    print(f"  connectomes.npy  -- shape {conn_arr.shape}, dtype {conn_arr.dtype}")
-    print(f"  labels.npy       -- {len(labels_arr)} subjects")
-    print(f"  metadata.csv     -- subject IDs, sites, diagnoses")
-    print(f"  roi_meta.pkl     -- ROI names and network assignments")
+    print(f"  connectomes.npy: shape {conn_arr.shape}, dtype {conn_arr.dtype}")
+    print(f"  labels.npy      : {len(labels_arr)} subjects")
+    print(f"  metadata.csv    : subject IDs, sites, diagnoses")
+    print(f"  roi_meta.pkl    : ROI names and network assignments")
     print("\nNext: python scripts/02_harmonize.py")
 
 

@@ -12,7 +12,7 @@ and UCLA.
 
 Graph construction decisions
 -----------------------------
-Edge threshold : |z| > 0.20 -- standard threshold for fMRI functional
+Edge threshold: |z| > 0.20 (standard threshold for fMRI functional
                  connectivity graphs (Bullmore & Sporns 2009). Retains
                  the strongest connections while discarding weak or noisy
                  ones. Applied after harmonization.
@@ -21,11 +21,11 @@ Node features  : 5 per ROI, computed from the thresholded adjacency matrix
 
 Node features
 -------------
-  0  mean_fc    -- average Fisher z to all other ROIs (overall connectivity)
-  1  degree     -- number of edges above threshold (hubness)
-  2  clustering -- local clustering coefficient (local network cliquishness)
-  3  pos_fc     -- mean positive FC (excitatory connectivity profile)
-  4  neg_fc     -- mean negative / anti-correlated FC (inhibitory profile)
+  0  mean_fc   : average Fisher z to all other ROIs (overall connectivity)
+  1  degree    : number of edges above threshold (hubness)
+  2  clustering: local clustering coefficient (local network cliquishness)
+  3  pos_fc    : mean positive FC (excitatory connectivity profile)
+  4  neg_fc    : mean negative / anti-correlated FC (inhibitory profile)
 
 Usage
 -----
@@ -182,7 +182,7 @@ def print_summary(graphs, edge_counts, labels):
 
     asd_edges  = edge_counts[labels == 1].mean()
     ctrl_edges = edge_counts[labels == 0].mean()
-    print(f"\n  Mean edges -- ASD: {asd_edges:.0f}  |  CTRL: {ctrl_edges:.0f}")
+    print(f"\n  Mean edges: ASD: {asd_edges:.0f}  |  CTRL: {ctrl_edges:.0f}")
 
 
 def save(graphs):
