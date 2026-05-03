@@ -26,7 +26,7 @@ The full pipeline runs in approximately 30 minutes on a standard laptop (CPU onl
 
 ### What is ASD and why study brain connectivity?
 
-Autism Spectrum Disorder (ASD) is a neurodevelopmental condition affecting approximately 1-2% of the global population [1], characterized by differences in social communication and restricted or repetitive behavior patterns. It is a spectrum, meaning the condition presents very differently across individuals.
+Autism Spectrum Disorder (ASD) is a neurodevelopmental condition affecting approximately 1 to 2% of the global population [1], characterized by differences in social communication and restricted or repetitive behavior patterns. It is a spectrum, meaning the condition presents very differently across individuals.
 
 Unlike conditions such as Alzheimer's disease, where specific brain regions are visibly lost, ASD does not produce obvious structural damage detectable by standard brain imaging. This has led researchers to focus instead on how brain regions **communicate with each other**: the hypothesis is that ASD arises not from failure of any single region, but from disrupted coordination across the brain's large-scale networks [1].
 
@@ -335,7 +335,7 @@ CC200 divides the brain into 200 functionally defined parcels. A higher-resoluti
 
 ## References
 
-1. Di Martino A, Yan C-G, Li Q, et al. The autism brain imaging data exchange: towards a large-scale evaluation of the intrinsic brain architecture in autism. *Molecular Psychiatry*. 2014;19(6):659-667. doi:10.1038/mp.2013.78. PMID: 24514918.
+1. Di Martino A, Yan C-G, Li Q, et al. The autism brain imaging data exchange: towards a large-scale evaluation of the intrinsic brain architecture in autism. *Molecular Psychiatry*. 2014;19(6):659-667. doi:10.1038/mp.2013.78. PMID: 23774715.
 
 2. Craddock RC, James GA, Holtzheimer PE, Hu XP, Mayberg HS. A whole brain fMRI atlas generated via spatially constrained spectral clustering. *Human Brain Mapping*. 2012;33(8):1914-1928. doi:10.1002/hbm.21333.
 
