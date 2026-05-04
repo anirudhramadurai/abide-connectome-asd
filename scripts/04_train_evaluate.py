@@ -242,7 +242,7 @@ def save(fold_results, all_probs, labels, node_imp, summary_rows):
     print("\nSaved results/")
     print("  cv_results.pkl: fold results, probabilities, node importance")
     print("  metrics.csv: summary table")
-    print("\nNext: python scripts/05_figures.py")
+    print("\nNext: python scripts/05_gnn_train_evaluate.py")
 
 
 def main():
