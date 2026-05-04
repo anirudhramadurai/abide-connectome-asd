@@ -8,7 +8,7 @@
 
 Using publicly available resting-state fMRI data from 303 participants across three ABIDE sites (NYU, USM, UCLA), I built a six-script Python pipeline to classify ASD from whole-brain functional connectivity patterns. Each participant's brain is represented as a graph of 200 regions connected by functional correlations. The pipeline applies ComBat site harmonization to remove scanner-driven variance, then evaluates two classifiers: a gradient-boosted ensemble on PCA-compressed connectivity features, and a PyTorch Geometric Graph Convolutional Network.
 
-Without harmonization, classification performance is at chance (AUC = 0.51), confirming that scanner differences between sites dominate the connectivity signal. After ComBat harmonization, PCA + gradient boosting achieves AUC = 0.723 +/- 0.036 in 5-fold cross-validation, consistent with published results on harmonized ABIDE data [5, 6]. The GCN (script 05) learns signal during training but does not generalize reliably at this dataset size, illustrating a known limitation of graph neural networks on dense brain connectivity graphs with fewer than ~500 subjects; this is documented as a limitation and future direction.
+Without harmonization, classification performance is at chance (AUC = 0.51), confirming that scanner differences between sites dominate the connectivity signal. After ComBat harmonization, PCA + gradient boosting achieves AUC = 0.720 +/- 0.037 in 5-fold cross-validation, consistent with published results on harmonized ABIDE data [5, 6]. The GCN (script 05) learns signal during training but does not generalize reliably at this dataset size, illustrating a known limitation of graph neural networks on dense brain connectivity graphs with fewer than ~500 subjects; this is documented as a limitation and future direction.
 
 The node importance analysis reveals that limbic system connectivity shows the largest ASD-Control differences across almost all features, followed by the frontoparietal network (FPN) for clustering coefficient and anti-correlations, and the sensorimotor network (SMN) for overall mean FC. These patterns are consistent with published findings on social cognition, executive function, and sensorimotor integration differences in ASD [8, 9].
 
@@ -153,12 +153,12 @@ AUC at chance. Site effects between NYU, USM, and UCLA dominate the connectivity
 
 | Metric | Mean | SD |
 |---|---|---|
-| Accuracy | 0.666 | 0.036 |
-| AUC-ROC | 0.723 | 0.036 |
-| Sensitivity (ASD) | 0.747 | 0.054 |
-| Specificity (CTRL) | 0.583 | 0.121 |
+| Accuracy | 0.680 | 0.032 |
+| AUC-ROC | 0.720 | 0.037 |
+| Sensitivity (ASD) | 0.747 | 0.061 |
+| Specificity (CTRL) | 0.610 | 0.077 |
 
-ComBat removes scanner-site variance; PCA efficiently captures the global structure of the harmonized 19,900-dimensional connectivity space in 50 components. AUC 0.723 is consistent with published results on harmonized ABIDE data [5, 6].
+ComBat removes scanner-site variance; PCA efficiently captures the global structure of the harmonized 19,900-dimensional connectivity space in 50 components. AUC 0.720 is consistent with published results on harmonized ABIDE data [5, 6].
 
 ### GCN (PyTorch Geometric)
 
@@ -249,6 +249,8 @@ Mean absolute difference between ASD and Control node features, aggregated by fu
 ## Setup and Usage
 
 **Requirements:** Python 3.9+
+
+> **Note on script 05 (GCN):** PyTorch Geometric requires , , and  with matching versions. Install PyTorch first for your platform (see pytorch.org), then install  and  for your torch version. Scripts 01-04 and 06 run without PyTorch and cover the primary gradient boosting result.
 
 ```bash
 # 1. Clone the repository

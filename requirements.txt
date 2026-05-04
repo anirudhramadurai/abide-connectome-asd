@@ -5,3 +5,7 @@ matplotlib>=3.7
 pandas>=2.0
 nilearn>=0.10
 neuroCombat>=0.2.12
+
+torch>=1.12
+torch-geometric>=2.0
+torch-sparse>=0.6  # requires matching torch version; see README
