@@ -335,7 +335,7 @@ Gradient boosting handles the high-dimensional, non-linear structure of PCA-comp
 No. It means GCNs require either larger datasets or richer per-node features. Published GCN papers achieving AUC 0.72–0.78 on ABIDE use either the full multi-site cohort or time-series-derived node features rather than thresholded graph statistics. The failure here is about dataset scale and feature richness, not the GCN approach itself.
 
 **Q: Could ComBat remove the ASD biological signal along with site effects?**
-Yes. This is exactly why the diagnostic label is passed as a protected covariate. Without it, ComBat treats group differences as part of the batch effect and removes them. Including the label tells ComBat to preserve between-group variance when modeling site effects.
+Yes. The diagnostic label is passed as a protected covariate for this reason. Without it, ComBat treats group differences as part of the batch effect and removes them. Including the label tells ComBat to preserve between-group variance when modeling site effects.
 
 **Q: Why is specificity so much more variable across folds than sensitivity?**
 The dataset has 154 ASD and 149 controls, nearly balanced, but fold composition shifts slightly. With ~30 subjects per fold, a few misclassified controls significantly shifts the specificity estimate. Sensitivity is more stable because the ASD class is marginally larger.
