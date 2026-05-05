@@ -212,7 +212,7 @@ AUC-ROC (blue) and Accuracy (orange) for each of the 5 cross-validation folds af
 
 [![ROC curves](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig5_roc_curves.png)](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig5_roc_curves.png)
 
-ROC curves for each of the 5 folds plus the interpolated mean with +/- 1 SD band. The mean AUC of 0.723 +/- 0.036 summarizes overall classification performance. All 5 fold curves track clearly above the diagonal chance line, confirming that the classifier is learning biological signal rather than site confounds. The individual fold spread (0.67-0.77) reflects genuine within-ABIDE heterogeneity in ASD presentation across subjects.
+ROC curves for each of the 5 folds plus the interpolated mean with +/- 1 SD band. The mean AUC of 0.720 +/- 0.037 summarizes overall classification performance. All 5 fold curves track clearly above the diagonal chance line, confirming that the classifier is learning biological signal rather than site confounds. The individual fold spread (0.67-0.77) reflects genuine within-ABIDE heterogeneity in ASD presentation across subjects.
 
 ---
 
@@ -239,7 +239,7 @@ Mean absolute difference between ASD and Control node features, aggregated by fu
 | Question | Finding |
 |---|---|
 | Does unharmonized multi-site classification work? | No. AUC = 0.51. Scanner variance at USM inflates FC and dominates the signal [11]. |
-| Does ComBat harmonization recover signal? | Yes. AUC improves from 0.514 to 0.723 after removing site effects [11, 12]. |
+| Does ComBat harmonization recover signal? | Yes. AUC improves from 0.514 to 0.720 after removing site effects [11, 12]. |
 | Does a GCN outperform gradient boosting here? | No. GCN learns during training but does not generalize at 303 subjects with 5 node features. |
 | Which networks show the largest ASD-Control differences? | Limbic (social cognition), FPN (executive function), and SMN (sensorimotor) [8, 9]. |
 | Are node-level features sufficient alone? | No. Individual ROI distributions overlap substantially; network-level structure is necessary. |
@@ -332,6 +332,24 @@ The dataset has 154 ASD and 149 controls, nearly balanced, but fold composition 
 
 **Q: What does the CC200 parcellation mean, and could a different one change the results?**
 CC200 divides the brain into 200 functionally defined parcels. A higher-resolution parcellation such as Schaefer-400 would capture finer-grained connectivity but increase the feature space from 19,900 to ~79,800 pairwise connections, requiring more subjects to avoid overfitting. This is listed as a future direction.
+
+**Q: Why Fisher z-transform the correlation values?**
+Pearson correlations are bounded between -1 and +1 and have non-normal distributions near those bounds. The Fisher z-transform (arctanh(r)) converts them to approximately normally distributed values with more consistent variance, which is required for ComBat's empirical Bayes framework to work correctly.
+
+**Q: Why use 50 PCA components?**
+50 components capture approximately 62% of the variance in the harmonized connectivity space while keeping the feature-to-sample ratio manageable. This was selected based on the explained variance curve; additional components contributed diminishing signal relative to noise at this sample size.
+
+**Q: What does 5-fold stratified cross-validation mean and why does it matter?**
+The 303 subjects are split into 5 equal folds while preserving the ASD/Control class ratio in each fold. The model trains on 4 folds and tests on the held-out fifth, repeated 5 times so every subject serves as a test subject exactly once. Stratification prevents a fold from being accidentally all-ASD or all-Control, which would distort the reported metrics.
+
+**Q: Does this model diagnose ASD?**
+No. This is a research classification pipeline, not a clinical diagnostic tool. AUC = 0.72 in a 3-site controlled research cohort does not mean the model would perform equivalently in clinical practice. The ABIDE dataset has specific preprocessing, age ranges, and inclusion criteria that differ from a general clinical population.
+
+**Q: Why threshold at |z| > 0.20 for graph construction but |z| > 0.50 for the GCN?**
+The 0.20 threshold is used for computing node-level graph features (degree, clustering coefficient) where the full connectivity structure is informative. The GCN uses the stricter 0.50 threshold to give message passing meaningful local neighborhood structure; at 60% graph density, message passing collapses toward a global mean and loses local discriminative power.
+
+**Q: Why only NYU, USM, and UCLA from ABIDE instead of all 17 sites?**
+These three sites provide a clean demonstration of the harmonization effect with an interpretable cohort. USM is particularly useful because its scanner produced measurably inflated mean FC (0.32 vs. 0.25 at the other two sites), making the site confound visible and the ComBat correction demonstrable. Scaling to all 17 sites is listed as a future direction.
 
 ---
 
