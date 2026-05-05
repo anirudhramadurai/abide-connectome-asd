@@ -2,6 +2,16 @@
 
 **Graph-based classification of Autism Spectrum Disorder from resting-state fMRI functional connectivity data**
 
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue) ![License](https://img.shields.io/badge/License-MIT-green) ![Data](https://img.shields.io/badge/Data-ABIDE%20PCP-orange)
+
+| | |
+|---|---|
+| **Dataset** | ABIDE PCP: 303 subjects (154 ASD, 149 control) across NYU, USM, UCLA |
+| **Primary result** | ComBat + PCA + Gradient Boosting: AUC = 0.720 +/- 0.037 |
+| **Baseline (unharmonized)** | AUC = 0.51 (chance) |
+| **GCN result** | AUC = 0.494 (fails to generalize at n=303) |
+| **Key finding** | Site harmonization is necessary; without it, classifiers learn scanner identity not biology |
+
 ---
 
 ## Overview
@@ -381,6 +391,7 @@ These three sites provide a clean demonstration of the harmonization effect with
 
 13. Kipf TN, Welling M. Semi-supervised classification with graph convolutional networks. *ICLR 2017*. arXiv:1609.02907.
 14. Power JD, Cohen AL, Nelson SM, et al. Functional network organization of the human brain. *Neuron*. 2011;72(4):665-678. doi:10.1016/j.neuron.2011.09.006.
+15. Heinsfeld AS, Franco AR, Craddock RC, Buchweitz A, Meneguzzi F. Identification of autism spectrum disorder using deep learning and the ABIDE dataset. *NeuroImage: Clinical*. 2018;17:895-903. doi:10.1016/j.nicl.2017.08.017.
 
 ---
 
