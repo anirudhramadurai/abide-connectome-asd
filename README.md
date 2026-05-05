@@ -176,11 +176,11 @@ ComBat removes scanner-site variance; PCA efficiently captures the global struct
 
 | Metric | Mean | SD |
 |---|---|---|
-| AUC-ROC | ~0.49–0.54 | high variance |
+| AUC-ROC | 0.494 ± 0.028 (range across folds: 0.46–0.54) | high variance |
 
 The GCN shows meaningful validation AUC during training (up to 0.72–0.82 in some folds) but does not generalize to the test set reliably. This is a known limitation of GCNs applied to dense brain connectivity graphs at this dataset scale: with only ~194 training subjects per fold and 5 node features, the model does not have enough signal to learn generalizable graph-level representations. At 60% graph density, message passing averages over ~120 neighbors per node, collapsing to a global mean after 2 layers. Even at 17% density (~6,900 edges), the 5-dimensional node features are insufficient to discriminate ASD from Control through neighborhood aggregation alone. The gradient boosting + PCA approach works because PCA directly captures global connectivity structure from all 19,900 pairwise connections simultaneously.
 
-Published GCN results achieving AUC 0.72–0.78 on ABIDE use either much larger multi-site cohorts [6] or more informative per-node features derived from the full time series rather than graph-derived statistics [7]. This is the primary future direction for this project.
+Published results on ABIDE range from ~67% accuracy with SVM-based approaches to AUC 0.72–0.78 with GCNs on larger cohorts [6, 7, 15]. Deep learning approaches using stacked autoencoders on the full ABIDE cohort achieve ~70% accuracy [15]. These methods either use much larger datasets or more informative per-node features derived from the full time series rather than graph-derived statistics. This is the primary future direction for this project.
 
 ---
 
@@ -222,7 +222,7 @@ AUC-ROC (blue) and Accuracy (orange) for each of the 5 cross-validation folds af
 
 [![ROC curves](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig5_roc_curves.png)](https://github.com/anirudhramadurai/abide-connectome-asd/raw/main/figures/fig5_roc_curves.png)
 
-ROC curves for each of the 5 folds plus the interpolated mean with ± 1 SD band. The mean AUC of 0.720 ± 0.037 summarizes overall classification performance. All 5 fold curves track clearly above the diagonal chance line, confirming that the classifier is learning biological signal rather than site confounds. The individual fold spread (0.67-0.77) reflects genuine within-ABIDE heterogeneity in ASD presentation across subjects.
+ROC curves for each of the 5 folds plus the interpolated mean with ± 1 SD band. The mean AUC of 0.720 ± 0.037 summarizes overall classification performance. All 5 fold curves track clearly above the diagonal chance line, confirming that the classifier is learning biological signal rather than site confounds. The individual fold spread (0.67–0.77) reflects genuine within-ABIDE heterogeneity in ASD presentation across subjects.
 
 ---
 
@@ -335,7 +335,7 @@ Gradient boosting handles the high-dimensional, non-linear structure of PCA-comp
 No. It means GCNs require either larger datasets or richer per-node features. Published GCN papers achieving AUC 0.72–0.78 on ABIDE use either the full multi-site cohort or time-series-derived node features rather than thresholded graph statistics. The failure here is about dataset scale and feature richness, not the GCN approach itself.
 
 **Q: Could ComBat remove the ASD biological signal along with site effects?**
-Yes -- this is exactly why the diagnostic label is passed as a protected covariate. Without it, ComBat treats group differences as part of the batch effect and removes them. Including the label tells ComBat to preserve between-group variance when modeling site effects.
+Yes. This is exactly why the diagnostic label is passed as a protected covariate. Without it, ComBat treats group differences as part of the batch effect and removes them. Including the label tells ComBat to preserve between-group variance when modeling site effects.
 
 **Q: Why is specificity so much more variable across folds than sensitivity?**
 The dataset has 154 ASD and 149 controls, nearly balanced, but fold composition shifts slightly. With ~30 subjects per fold, a few misclassified controls significantly shifts the specificity estimate. Sensitivity is more stable because the ASD class is marginally larger.
