@@ -8,9 +8,9 @@
 |---|---|
 | **Dataset** | ABIDE PCP: 303 subjects (154 ASD, 149 control) across NYU, USM, UCLA |
 | **Primary result** | ComBat + PCA + Gradient Boosting: AUC = 0.720 ± 0.037 |
-| **Baseline (unharmonized)** | AUC = 0.51 (chance) |
+| **Baseline (unharmonized)** | AUC = 0.514 ± 0.042 (near chance) |
 | **GCN result** | AUC = 0.494 (fails to generalize at n=303) |
-| **Key finding** | Site harmonization is necessary; without it, classifiers learn scanner identity not biology |
+| **Key finding** | Site harmonization is necessary; without it, classifiers learn scanner identity, not biology |
 
 ---
 
@@ -319,7 +319,7 @@ It exists as an educational resource to make the GCN forward pass transparent: s
 - Implement a PyTorch Geometric GCN with time-series-derived node features (regional variance, autocorrelation, spectral power) which provide richer input than graph statistics alone [6, 7]
 - Apply graph attention networks (GAT) to learn which edges are most informative rather than using a fixed threshold
 - Test higher-resolution parcellations (Schaefer-400, Gordon-333) to capture finer-grained connectivity patterns
-- Incorporate demographic covariates (age, sex, IQ) to account for biological confounds
+- Incorporate demographic covariates (age, sex, IQ, head motion mean FD) to account for biological confounds; head motion is a documented confound in ABIDE functional connectivity (Power et al., 2012)
 
 ---
 
@@ -392,6 +392,10 @@ These three sites provide a clean demonstration of the harmonization effect with
 13. Kipf TN, Welling M. Semi-supervised classification with graph convolutional networks. *ICLR 2017*. arXiv:1609.02907.
 14. Power JD, Cohen AL, Nelson SM, et al. Functional network organization of the human brain. *Neuron*. 2011;72(4):665-678. doi:10.1016/j.neuron.2011.09.006.
 15. Heinsfeld AS, Franco AR, Craddock RC, Buchweitz A, Meneguzzi F. Identification of autism spectrum disorder using deep learning and the ABIDE dataset. *NeuroImage: Clinical*. 2018;17:895-903. doi:10.1016/j.nicl.2017.08.017.
+
+---
+
+16. Power JD, Barnes KA, Snyder AZ, Schlaggar BL, Petersen SE. Spurious but systematic correlations in functional connectivity MRI networks arise from subject motion. *NeuroImage*. 2012;59(3):2142-2154. doi:10.1016/j.neuroimage.2011.10.018.
 
 ---
 
